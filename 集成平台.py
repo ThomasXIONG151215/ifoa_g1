@@ -10,10 +10,6 @@ import folium
 from streamlit_folium import folium_static
 from plotly.subplots import make_subplots
 import plotly.graph_objs as go
-from stpyvista import stpyvista
-from stpyvista.utils import is_the_app_embedded
-
-import pyvista as pv 
 
 st.set_page_config(page_title="室墨司源",
                    page_icon="🏠",
