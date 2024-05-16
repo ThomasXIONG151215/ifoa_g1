@@ -13,4 +13,3 @@ stpyvista==0.0.17
 streamlit==1.34.0
 streamlit_folium==0.20.0
 tzwhere==3.0.3
-~treamlit==1.21.0
