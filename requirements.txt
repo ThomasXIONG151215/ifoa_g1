@@ -1,4 +1,3 @@
-CoolProp
 PIL
 RPi
 ast
@@ -6,7 +5,6 @@ base64
 binascii
 csv
 cv2
-dashscope
 dataclasses
 dataset
 datetime
@@ -40,7 +38,6 @@ sklearn
 snap7
 streamlit
 string
-tensorflow
 threading
 time
 tqdm
