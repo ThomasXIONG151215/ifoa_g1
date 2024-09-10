@@ -7,7 +7,7 @@ from io import StringIO
 # Gist configuration
 GIST_ID = "d4ada2ff7bf615924edb4574640607f5"  # numerical data
 GIST_URL = f'https://api.github.com/gists/{GIST_ID}'
-TOKEN = "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"
+TOKEN = "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"
 HEADERS = {
     'Authorization': f'token {TOKEN}',
     'Accept': 'application/vnd.github.v3+json'
