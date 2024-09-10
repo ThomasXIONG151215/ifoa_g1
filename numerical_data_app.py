@@ -5,7 +5,7 @@ import requests
 from io import StringIO
 
 # Gist configuration
-GIST_ID = "d4ada2ff7bf615924edb4574640607f5"  # numerical data
+GIST_ID = "log_sensor.csv"#"d4ada2ff7bf615924edb4574640607f5"  # numerical data
 GIST_URL = f'https://api.github.com/gists/{GIST_ID}'
 TOKEN = "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"
 HEADERS = {
