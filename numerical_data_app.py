@@ -46,7 +46,7 @@ def settings_editor(conn, settings):
 
         # 策略
         st.subheader("策略")
-        new_settings['strategy'] = st.selectbox("控制策略", ["步步为营", "全面打击", "火力覆盖"], index=["步步为营", "全面打击", "火力覆盖"].index(settings['strategy']))
+        new_settings['strategy'] = st.selectbox("控制策略", ["经典内循环", "新风外循环", "混合双循环"], index=["经典内循环", "新风外循环", "混合双循环"].index(settings['strategy']))
 
     with col2:
         # 环境设置
