@@ -6,6 +6,7 @@ import json
 from datetime import datetime, timedelta
 import os
 from st_files_connection import FilesConnection
+import streamlit.components.v1 as components
 
 def load_data(conn):
     try:
