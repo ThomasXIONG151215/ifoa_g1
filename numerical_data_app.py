@@ -28,6 +28,53 @@ def save_settings(conn, settings):
     except Exception as e:
         st.error(f"更新设置失败: {str(e)}")
 
+
+from langchain_community.llms import Tongyi
+from langchain_community.llms.moonshot import Moonshot
+from langchain_experimental.agents import create_pandas_dataframe_agent
+from dashscope import MultiModalConversation
+from dataset import df
+from langchain_community.document_loaders import UnstructuredMarkdownLoader
+from langchain_core.documents import Document
+
+#os.environ["DASHSCOPE_API_KEY"] = "sk-a36dbf13c32f4b28a7dfc3ba81275fa8"
+#os.environ["MOONSHOT_API_KEY"] = "sk-wQJ6rfZixFKs8eKyPmAzXBfS1qdObnPbCIEoMyr6nq3i4IMd"
+
+#llms agents
+langchain_llm = Tongyi(temperature = 0,
+                     api_key="sk-a36dbf13c32f4b28a7dfc3ba81275fa8",
+                     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+                     )
+
+moonshot_llm = Moonshot(model="moonshot-v1-128k") 
+
+agent_data_analyst = create_pandas_dataframe_agent(langchain_llm, df, verbose=True,allow_dangerous_code=True)
+
+def ai_assistants(df):
+    
+    agent_data_analyst = create_pandas_dataframe_agent(langchain_llm, df, verbose=True,allow_dangerous_code=True)
+
+    st.subheader("数据分析兔")
+    if "messages" not in st.session_state.keys(): # Initialize the chat message history
+        
+        st.session_state.messages = [
+            {"role": "assistant", "content": "Ask me a question about Streamlit's open-source Python library!"}
+        ]
+    with st.container(height=700):
+        combined_info, summary = data_analysis()
+        
+    st.subheader("助理农艺兔")
+    
+    with st.container(height=700):
+        iframe_html = """
+        <iframe src="https://udify.app/chatbot/QLSY0P3UgKlOifoO" 
+                style="width: 100%; height: 700px;" 
+                frameborder="0" 
+                allow="microphone">
+        </iframe>
+        """
+        components.html(iframe_html, height=700)
+
 def settings_editor(conn, settings):
     new_settings = settings.copy()
     
@@ -161,13 +208,16 @@ def main():
         return
 
     # 为设置编辑器和数据查看器创建标签页
-    tab1, tab2 = st.tabs(["设置编辑器", "数据查看器"])
+    tab1, tab2, tab3 = st.tabs(["设置编辑器", "数据查看器", "AI助手团"])
 
     with tab1:
         settings_editor(conn, settings)
 
     with tab2:
         data_viewer(df)
+
+    with tab3:
+        ai_assistants(df)
 
 if __name__ == "__main__":
     main()
