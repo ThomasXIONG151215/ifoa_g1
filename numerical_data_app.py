@@ -50,7 +50,7 @@ moonshot_llm = Moonshot(model="moonshot-v1-128k",
                        ) 
 
 @st.cache_data 
-def data_analysis():
+def data_analysis(agent_data_analyst):
     questions = [
         "**这里是否缺失数据?**",
         "**请对当前种植情况做一个整体评价**",
@@ -93,7 +93,7 @@ def ai_assistants(df):
             {"role": "assistant", "content": "Ask me a question about Streamlit's open-source Python library!"}
         ]
     with st.container(height=700):
-        combined_info, summary = data_analysis()
+        combined_info, summary = data_analysis(agent_data_analyst)
         
     st.subheader("助理农艺兔")
     
