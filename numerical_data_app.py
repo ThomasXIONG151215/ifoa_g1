@@ -95,56 +95,35 @@ def data_viewer(df):
         '温度': ['Temperature', 'Temperature1', 'Temperature2', 'Temperature3'],
         '湿度': ['Humidity', 'Humidity1', 'Humidity2', 'Humidity3'],
         'CO2': ['CO2PPM'],
-        #'水质': ['pH'],
-        #'水位': ['Wlevel']
+        '水质': ['pH'],
+        '水位': ['Wlevel']
     }
 
     # 为每个组创建图表
     for group, columns in column_groups.items():
         fig = go.Figure()
-        valid_columns = [col for col in columns if col in filtered_df.columns]
+        valid_data = False
+        for column in columns:
+            if column in filtered_df.columns:
+                y_data = filtered_df[column].dropna()
+                if not y_data.empty:
+                    fig.add_trace(go.Scatter(x=filtered_df['DateTime'], y=y_data, mode='lines', name=column))
+                    valid_data = True
         
-        if not valid_columns:
+        if valid_data:
+            y_max = max([trace.y.max() for trace in fig.data])
+            fig.update_layout(
+                title=f'{group}数据',
+                xaxis_title='日期时间',
+                yaxis_title='数值',
+                yaxis=dict(range=[0, y_max * 1.1]),  # 设置y轴从0开始
+                legend_title='传感器',
+                height=600,  # 增加高度以提高可视性
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        else:
             st.warning(f"没有找到 {group} 的有效数据。")
-            continue
-        
-        for column in valid_columns:
-            y_data = filtered_df[column].dropna()
-            if not y_data.empty:
-                fig.add_trace(go.Scatter(x=filtered_df['DateTime'], y=y_data, mode='lines', name=column))
-        
-        if len(fig.data) > 0:  # 只有在有数据时才显示图表
-            y_values = [trace.y for trace in fig.data]
-            y_max = max([max(y) if len(y) > 0 else 0 for y in y_values])
-            y_min = min([min(y) if len(y) > 0 else 0 for y in y_values])
-            
-            if y_max > y_min:
-                fig.update_layout(
-                    title=f'{group}数据',
-                    xaxis_title='日期时间',
-                    yaxis_title='数值',
-                    yaxis=dict(range=[max(0, y_min * 0.9), y_max * 1.1]),  # 设置y轴从0或略低于最小值开始
-                    legend_title='传感器',
-                    height=600,  # 增加高度以提高可视性
-                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-                )
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.warning(f"{group}数据全为常数或没有有效数据。")
-
-    # 添加摘要统计表
-    st.subheader("摘要统计")
-    summary_df = filtered_df[list(sum(column_groups.values(), []))].describe()
-    st.dataframe(summary_df)
-
-    # 添加数据下载按钮
-    csv = filtered_df.to_csv(index=False)
-    st.download_button(
-        label="下载CSV数据",
-        data=csv,
-        file_name="plant_factory_data.csv",
-        mime="text/csv",
-    )
 
     # 添加摘要统计表
     st.subheader("摘要统计")
