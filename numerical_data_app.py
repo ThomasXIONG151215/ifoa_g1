@@ -1,82 +1,126 @@
 import streamlit as st
-import plotly.graph_objects as go
 import pandas as pd
+import plotly.express as px
+import json
 import requests
-from io import StringIO
+from datetime import datetime, timedelta
 
 # Gist configuration
-GIST_ID = "d4ada2ff7bf615924edb4574640607f5"  # numerical data
+GIST_ID = "d4ada2ff7bf615924edb4574640607f5"
 GIST_URL = f'https://api.github.com/gists/{GIST_ID}'
-TOKEN = "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"
+TOKEN = "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"
 HEADERS = {
     'Authorization': f'token {TOKEN}',
     'Accept': 'application/vnd.github.v3+json'
 }
 
-@st.cache_data(ttl=600)  # Cache the data for 10 minutes
-def load_data():
-    try:
-        response = requests.get(GIST_URL, headers=HEADERS)
-        response.raise_for_status()
+def fetch_gist_content(file_name):
+    response = requests.get(GIST_URL, headers=HEADERS)
+    if response.status_code == 200:
         gist_data = response.json()
-        csv_content = gist_data['files']['log_sensor.csv']['content']
-        df = pd.read_csv(StringIO(csv_content))
-        df['timestamp'] = pd.to_datetime(df['DateTime'])
-        return df
-    except Exception as e:
-        st.error(f"Error loading data from Gist: {e}")
+        return gist_data['files'][file_name]['content']
+    else:
+        st.error(f"Failed to fetch {file_name}. Status code: {response.status_code}")
         return None
 
-def create_plot(df, parameters):
-    fig = go.Figure()
-    for param in parameters:
-        fig.add_trace(go.Scatter(x=df['timestamp'], y=df[param], mode='lines', name=param))
-    
-    fig.update_layout(
-        title="Sensor Data Over Time",
-        xaxis_title="Timestamp",
-        yaxis_title="Value",
-        legend_title="Parameters",
-        height=600
-    )
-    return fig
+def update_gist_file(file_name, content):
+    data = {
+        "files": {
+            file_name: {
+                "content": json.dumps(content, indent=2)
+            }
+        }
+    }
+    response = requests.patch(GIST_URL, headers=HEADERS, json=data)
+    if response.status_code == 200:
+        st.success(f"{file_name} updated successfully!")
+    else:
+        st.error(f"Failed to update {file_name}. Status code: {response.status_code}")
+
+def load_data():
+    content = fetch_gist_content('integral_data.csv')
+    if content:
+        return pd.read_csv(pd.compat.StringIO(content))
+    return None
+
+def load_settings():
+    content = fetch_gist_content('settings.json')
+    if content:
+        return json.loads(content)
+    return None
 
 def main():
-    st.title("Plant Factory Sensor Data Visualization")
+    st.title("Plant Factory Data Viewer and Settings Editor")
 
+    # Load data and settings
     df = load_data()
-    if df is not None:
-        st.write("Data loaded successfully!")
+    settings = load_settings()
 
-        # Allow user to select date range
-        date_range = st.date_input(
-            "Select date range",
-            value=(df['timestamp'].min().date(), df['timestamp'].max().date()),
-            min_value=df['timestamp'].min().date(),
-            max_value=df['timestamp'].max().date()
-        )
+    if df is None or settings is None:
+        st.error("Failed to load data or settings. Please check your Gist configuration.")
+        return
 
-        # Filter data based on selected date range
-        start_date, end_date = date_range
-        mask = (df['timestamp'].dt.date >= start_date) & (df['timestamp'].dt.date <= end_date)
-        filtered_df = df.loc[mask]
+    # Settings Editor
+    st.header("Settings Editor")
+    with st.expander("Edit Settings"):
+        new_settings = settings.copy()
+        
+        # Lighting settings
+        st.subheader("Lighting")
+        new_settings['lighting']['duration_hours'] = st.slider("Light Duration (hours)", 1, 24, settings['lighting']['duration_hours'])
+        new_settings['lighting']['dark_period_hours'] = st.slider("Dark Period (hours)", 0, 24, settings['lighting']['dark_period_hours'])
+        new_settings['lighting']['intensity_percentage'] = st.slider("Light Intensity (%)", 0, 100, settings['lighting']['intensity_percentage'])
 
-        # Allow user to select parameters
-        all_params = ["Temperature", "Humidity", "CO2", "pH", "WTEMP", "EC", "Wlevel"]
-        selected_params = st.multiselect("Select parameters to display", all_params, default=all_params)
+        # Strategy
+        new_settings['strategy'] = st.selectbox("Strategy", ["步步为营", "全面打击", "火力覆盖"], index=["步步为营", "全面打击", "火力覆盖"].index(settings['strategy']))
 
-        if selected_params:
-            fig = create_plot(filtered_df, selected_params)
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("Please select at least one parameter to display.")
+        # Environment settings
+        st.subheader("Environment")
+        for period in ['light_period', 'dark_period']:
+            st.write(f"{period.replace('_', ' ').title()}")
+            new_settings['environment'][period]['temperature_celsius'] = st.slider(f"Temperature (°C) - {period}", 0, 40, settings['environment'][period]['temperature_celsius'])
+            new_settings['environment'][period]['humidity_percentage'] = st.slider(f"Humidity (%) - {period}", 0, 100, settings['environment'][period]['humidity_percentage'])
+            new_settings['environment'][period]['co2_ppm'] = st.slider(f"CO2 (ppm) - {period}", 0, 2000, settings['environment'][period]['co2_ppm'])
 
-        # Display raw data
-        if st.checkbox("Show raw data"):
-            st.write(filtered_df)
+        # Irrigation settings
+        st.subheader("Irrigation")
+        new_settings['irrigation']['frequency_hours'] = st.number_input("Irrigation Frequency (hours)", 0.1, 24.0, settings['irrigation']['frequency_hours'], 0.1)
+        new_settings['irrigation']['duration_minutes'] = st.number_input("Irrigation Duration (minutes)", 1, 60, settings['irrigation']['duration_minutes'])
 
+        # Nutrient solution settings
+        st.subheader("Nutrient Solution")
+        new_settings['nutrient_solution']['ec_ms_cm'] = st.number_input("EC (mS/cm)", 0.1, 5.0, settings['nutrient_solution']['ec_ms_cm'], 0.1)
+        new_settings['nutrient_solution']['ph'] = st.number_input("pH", 0.0, 14.0, settings['nutrient_solution']['ph'], 0.1)
+
+        # Update settings
+        if st.button("Update Settings"):
+            update_gist_file('settings.json', new_settings)
+
+    # Data Viewer
+    st.header("Data Viewer")
+    
+    # Convert DateTime column to datetime
+    df['DateTime'] = pd.to_datetime(df['DateTime_y'])
+
+    # Time range selector
+    date_range = st.date_input(
+        "Select date range",
+        [df['DateTime'].min().date(), df['DateTime'].max().date()]
+    )
+    start_date, end_date = date_range
+    mask = (df['DateTime'].dt.date >= start_date) & (df['DateTime'].dt.date <= end_date)
+    filtered_df = df.loc[mask]
+
+    # Column selector
+    data_columns = ['Temperature', 'Humidity', 'CO2PPM', 'pH', 'WTEMP', 'EC', 'Wlevel']
+    selected_columns = st.multiselect("Select columns to display", data_columns, default=['Temperature', 'Humidity', 'CO2PPM'])
+
+    if selected_columns:
+        fig = px.line(filtered_df, x='DateTime', y=selected_columns, title='Plant Factory Environmental Data')
+        fig.update_layout(legend_title_text='Parameters')
+        st.plotly_chart(fig)
     else:
-        st.error("Failed to load data. Please check your Gist configuration and try again.")
+        st.warning("Please select at least one column to display.")
 
 if __name__ == "__main__":
     main()
