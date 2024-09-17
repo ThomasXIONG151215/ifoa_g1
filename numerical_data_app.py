@@ -86,16 +86,16 @@ def ai_assistants(df):
     
     agent_data_analyst = create_pandas_dataframe_agent(langchain_llm, df, verbose=True,allow_dangerous_code=True)
 
-    st.subheader("数据分析兔")
-    if "messages" not in st.session_state.keys(): # Initialize the chat message history
+    #st.subheader("数据分析兔")
+    #if "messages" not in st.session_state.keys(): # Initialize the chat message history
         
-        st.session_state.messages = [
-            {"role": "assistant", "content": "Ask me a question about Streamlit's open-source Python library!"}
-        ]
-    with st.container(height=700):
-        combined_info, summary = data_analysis(agent_data_analyst)
+    #    st.session_state.messages = [
+    #        {"role": "assistant", "content": "Ask me a question about Streamlit's open-source Python library!"}
+    #    ]
+    #with st.container(height=700):
+    #    combined_info, summary = data_analysis(agent_data_analyst)
         
-    st.subheader("助理农艺兔")
+    #st.subheader("助理农艺兔")
     
     with st.container(height=700):
         iframe_html = """
