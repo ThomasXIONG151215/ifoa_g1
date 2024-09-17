@@ -125,7 +125,10 @@ def data_viewer(df):
     )
 
 def main():
-    st.title("植物工厂数据查看器和设置编辑器")
+    st.set_page_config(
+        page_title='室墨司源',
+        layout='wide')
+    st.title("司源中控平台")
 
     conn = st.connection('s3', type=FilesConnection)
 
