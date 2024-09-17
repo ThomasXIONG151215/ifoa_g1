@@ -66,9 +66,8 @@ def main():
 
         # Irrigation settings
         st.subheader("Irrigation")
-        new_settings['irrigation']['frequency_hours'] = st.number_input("Irrigation Frequency (hours)", 0.1, 24.0, settings['irrigation']['frequency_hours'], 0.1)
-        new_settings['irrigation']['duration_minutes'] = st.number_input("Irrigation Duration (minutes)", 1, 60, settings['irrigation']['duration_minutes'])
-
+        new_settings['irrigation']['frequency_hours'] = st.number_input("Irrigation Frequency (hours)", 0.1, 24.0, float(settings['irrigation']['frequency_hours']), 0.1)
+        new_settings['irrigation']['duration_minutes'] = st.number_input("Irrigation Duration (minutes)", 1, 60, int(settings['irrigation']['duration_minutes']), 1)
         # Nutrient solution settings
         st.subheader("Nutrient Solution")
         new_settings['nutrient_solution']['ec_ms_cm'] = st.number_input("EC (mS/cm)", 0.1, 5.0, settings['nutrient_solution']['ec_ms_cm'], 0.1)
