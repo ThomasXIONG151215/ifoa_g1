@@ -45,7 +45,9 @@ langchain_llm = Tongyi(temperature = 0,
                      base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
                      )
 
-moonshot_llm = Moonshot(model="moonshot-v1-128k") 
+moonshot_llm = Moonshot(model="moonshot-v1-128k",
+                       api_key="sk-wQJ6rfZixFKs8eKyPmAzXBfS1qdObnPbCIEoMyr6nq3i4IMd"
+                       ) 
 
 agent_data_analyst = create_pandas_dataframe_agent(langchain_llm, df, verbose=True,allow_dangerous_code=True)
 
