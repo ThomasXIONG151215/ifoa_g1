@@ -49,6 +49,38 @@ moonshot_llm = Moonshot(model="moonshot-v1-128k",
                        api_key="sk-wQJ6rfZixFKs8eKyPmAzXBfS1qdObnPbCIEoMyr6nq3i4IMd"
                        ) 
 
+@st.cache_data 
+def data_analysis():
+    questions = [
+        "**这里是否缺失数据?**",
+        "**请对当前种植情况做一个整体评价**",
+        "**当前室内温度对作物的影响如何？**",
+        "**当前CO2浓度是否在最优区间内?对植物生长有何影响?**",
+        "**目前的光照强度是否适宜?是否需要调整?**",
+        "**湿度水平如何?是否在植物生长的理想范围内?**",
+        "**基于当前数据,您对未来一周的产量有何预测?**",
+        "**有哪些关键指标需要特别关注或改进?**"
+    ]
+    
+    avatar = ':material/cruelty_free:'
+    combined_info = ""
+    
+    for question in questions:
+        st.write(question)
+        message = st.chat_message(name="ai", avatar=avatar)
+        answer = agent_data_analyst.run("请用中文回答: " + question)
+        message.write(answer)
+        combined_info += question + "\n" + answer + "\n\n"
+    
+    # 生成总结报告
+    summary_prompt = "基于以下分析结果,请生成一个简洁的总结报告,突出关键发现和建议:\n\n" + combined_info
+    summary = agent_data_analyst.run(summary_prompt)
+    
+    st.write("**总结报告**")
+    message = st.chat_message(name="ai", avatar=':material/file-document-outline:')
+    message.write(summary)
+    
+    return combined_info, summary
 
 def ai_assistants(df):
     
