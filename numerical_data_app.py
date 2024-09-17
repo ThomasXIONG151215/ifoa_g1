@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 # Gist configuration
 GIST_ID = "d4ada2ff7bf615924edb4574640607f5"
 GIST_URL = f'https://api.github.com/gists/{GIST_ID}'
-TOKEN = "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"
+TOKEN = "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"
 HEADERS = {
     'Authorization': f'token {TOKEN}',
     'Accept': 'application/vnd.github.v3+json'
