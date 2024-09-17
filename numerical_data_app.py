@@ -102,22 +102,35 @@ def data_viewer(df):
     # 为每个组创建图表
     for group, columns in column_groups.items():
         fig = go.Figure()
-        for column in columns:
-            if column in filtered_df.columns:
-                fig.add_trace(go.Scatter(x=filtered_df['DateTime'], y=filtered_df[column], mode='lines', name=column))
+        valid_columns = [col for col in columns if col in filtered_df.columns]
+        
+        if not valid_columns:
+            st.warning(f"没有找到 {group} 的有效数据。")
+            continue
+        
+        for column in valid_columns:
+            y_data = filtered_df[column].dropna()
+            if not y_data.empty:
+                fig.add_trace(go.Scatter(x=filtered_df['DateTime'], y=y_data, mode='lines', name=column))
         
         if len(fig.data) > 0:  # 只有在有数据时才显示图表
-            y_max = max([trace.y.max() for trace in fig.data])
-            fig.update_layout(
-                title=f'{group}数据',
-                xaxis_title='日期时间',
-                yaxis_title='数值',
-                yaxis=dict(range=[0, y_max * 1.1]),  # 设置y轴从0开始，最大值略高于数据最大值
-                legend_title='传感器',
-                height=600,  # 增加高度以提高可视性
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-            )
-            st.plotly_chart(fig, use_container_width=True)
+            y_values = [trace.y for trace in fig.data]
+            y_max = max([max(y) if len(y) > 0 else 0 for y in y_values])
+            y_min = min([min(y) if len(y) > 0 else 0 for y in y_values])
+            
+            if y_max > y_min:
+                fig.update_layout(
+                    title=f'{group}数据',
+                    xaxis_title='日期时间',
+                    yaxis_title='数值',
+                    yaxis=dict(range=[max(0, y_min * 0.9), y_max * 1.1]),  # 设置y轴从0或略低于最小值开始
+                    legend_title='传感器',
+                    height=600,  # 增加高度以提高可视性
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning(f"{group}数据全为常数或没有有效数据。")
 
     # 添加摘要统计表
     st.subheader("摘要统计")
