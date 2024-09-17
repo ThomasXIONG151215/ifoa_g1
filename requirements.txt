@@ -3,3 +3,8 @@ pandas
 requests
 s3fs
 st-files-connection
+langchain_community
+langchain
+dashscope
+langchain_experimental
+langchain_core
