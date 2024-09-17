@@ -8,3 +8,4 @@ langchain
 dashscope
 langchain_experimental
 langchain_core
+tabulate
