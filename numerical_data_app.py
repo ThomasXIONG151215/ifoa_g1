@@ -2,62 +2,42 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import json
-import requests
 from datetime import datetime, timedelta
+import os
 
-# Gist configuration
-GIST_ID = "d4ada2ff7bf615924edb4574640607f5"
-GIST_URL = f'https://api.github.com/gists/{GIST_ID}'
-TOKEN = "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"
-HEADERS = {
-    'Authorization': f'token {TOKEN}',
-    'Accept': 'application/vnd.github.v3+json'
-}
-
-def fetch_gist_content(file_name):
-    response = requests.get(GIST_URL, headers=HEADERS)
-    if response.status_code == 200:
-        gist_data = response.json()
-        return gist_data['files'][file_name]['content']
+def load_data(file_path):
+    if os.path.exists(file_path):
+        return pd.read_csv(file_path)
     else:
-        st.error(f"Failed to fetch {file_name}. Status code: {response.status_code}")
+        st.error(f"File not found: {file_path}")
         return None
 
-def update_gist_file(file_name, content):
-    data = {
-        "files": {
-            file_name: {
-                "content": json.dumps(content, indent=2)
-            }
-        }
-    }
-    response = requests.patch(GIST_URL, headers=HEADERS, json=data)
-    if response.status_code == 200:
-        st.success(f"{file_name} updated successfully!")
+def load_settings(file_path):
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as f:
+            return json.load(f)
     else:
-        st.error(f"Failed to update {file_name}. Status code: {response.status_code}")
+        st.error(f"File not found: {file_path}")
+        return None
 
-def load_data():
-    content = fetch_gist_content('integral_data.csv')
-    if content:
-        return pd.read_csv(pd.compat.StringIO(content))
-    return None
-
-def load_settings():
-    content = fetch_gist_content('settings.json')
-    if content:
-        return json.loads(content)
-    return None
+def save_settings(file_path, settings):
+    with open(file_path, 'w') as f:
+        json.dump(settings, f, indent=2)
+    st.success("Settings updated successfully!")
 
 def main():
     st.title("Plant Factory Data Viewer and Settings Editor")
 
+    # File paths
+    data_file = 'integral_data.csv'
+    settings_file = 'settings.json'
+
     # Load data and settings
-    df = load_data()
-    settings = load_settings()
+    df = load_data(data_file)
+    settings = load_settings(settings_file)
 
     if df is None or settings is None:
-        st.error("Failed to load data or settings. Please check your Gist configuration.")
+        st.error("Failed to load data or settings. Please check your file paths.")
         return
 
     # Settings Editor
@@ -94,7 +74,7 @@ def main():
 
         # Update settings
         if st.button("Update Settings"):
-            update_gist_file('settings.json', new_settings)
+            save_settings(settings_file, new_settings)
 
     # Data Viewer
     st.header("Data Viewer")
