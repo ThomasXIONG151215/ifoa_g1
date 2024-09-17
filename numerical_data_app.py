@@ -33,7 +33,6 @@ from langchain_community.llms import Tongyi
 from langchain_community.llms.moonshot import Moonshot
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from dashscope import MultiModalConversation
-from dataset import df
 from langchain_community.document_loaders import UnstructuredMarkdownLoader
 from langchain_core.documents import Document
 
