@@ -137,7 +137,7 @@ def main():
         layout='wide')
     st.title("司源中控平台")
 
-    st.sidebar.image("logo.png", use_column_width=True)
+    st.sidebar.image("logo.svg", use_column_width=True)
     
     #st.title("植物工厂数据查看器和设置编辑器")
 
