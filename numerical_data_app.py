@@ -33,32 +33,39 @@ def settings_editor(conn, settings):
     
     st.header("设置编辑器")
     
-    # 光照设置
-    st.subheader("光照")
-    new_settings['lighting']['duration_hours'] = st.slider("光照时长 (小时)", 1, 24, settings['lighting']['duration_hours'])
-    new_settings['lighting']['dark_period_hours'] = st.slider("黑暗时长 (小时)", 0, 24, settings['lighting']['dark_period_hours'])
-    new_settings['lighting']['intensity_percentage'] = st.slider("光照强度 (%)", 0, 100, settings['lighting']['intensity_percentage'])
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # 光照设置
+        st.subheader("光照")
+        new_settings['lighting']['on_time'] = st.time_input("开灯时间", datetime.strptime(settings['lighting'].get('on_time', '06:00'), "%H:%M").time())
+        new_settings['lighting']['off_time'] = st.time_input("关灯时间", datetime.strptime(settings['lighting'].get('off_time', '22:00'), "%H:%M").time())
+        
+        for i in range(4):
+            new_settings['lighting'][f'led_intensity_{i+1}'] = st.slider(f"LED灯排 {i+1} 强度 (%)", 0, 100, settings['lighting'].get(f'led_intensity_{i+1}', 50))
 
-    # 策略
-    new_settings['strategy'] = st.selectbox("策略", ["步步为营", "全面打击", "火力覆盖"], index=["步步为营", "全面打击", "火力覆盖"].index(settings['strategy']))
+        # 策略
+        st.subheader("策略")
+        new_settings['strategy'] = st.selectbox("控制策略", ["步步为营", "全面打击", "火力覆盖"], index=["步步为营", "全面打击", "火力覆盖"].index(settings['strategy']))
 
-    # 环境设置
-    st.subheader("环境")
-    for period in ['light_period', 'dark_period']:
-        st.write("光照期" if period == 'light_period' else "黑暗期")
-        new_settings['environment'][period]['temperature_celsius'] = st.slider(f"温度 (°C) - {'光照期' if period == 'light_period' else '黑暗期'}", 0, 40, settings['environment'][period]['temperature_celsius'])
-        new_settings['environment'][period]['humidity_percentage'] = st.slider(f"湿度 (%) - {'光照期' if period == 'light_period' else '黑暗期'}", 0, 100, settings['environment'][period]['humidity_percentage'])
-        new_settings['environment'][period]['co2_ppm'] = st.slider(f"CO2 (ppm) - {'光照期' if period == 'light_period' else '黑暗期'}", 0, 2000, settings['environment'][period]['co2_ppm'])
+    with col2:
+        # 环境设置
+        st.subheader("环境")
+        for period in ['light_period', 'dark_period']:
+            st.write("光照期" if period == 'light_period' else "黑暗期")
+            new_settings['environment'][period]['temperature_celsius'] = st.slider(f"温度 (°C) - {'光照期' if period == 'light_period' else '黑暗期'}", 0, 40, settings['environment'][period]['temperature_celsius'])
+            new_settings['environment'][period]['humidity_percentage'] = st.slider(f"湿度 (%) - {'光照期' if period == 'light_period' else '黑暗期'}", 0, 100, settings['environment'][period]['humidity_percentage'])
+            new_settings['environment'][period]['co2_ppm'] = st.slider(f"CO2 (ppm) - {'光照期' if period == 'light_period' else '黑暗期'}", 0, 2000, settings['environment'][period]['co2_ppm'])
 
-    # 灌溉设置
-    st.subheader("灌溉")
-    new_settings['irrigation']['frequency_hours'] = st.number_input("灌溉频率 (小时)", 0.1, 24.0, float(settings['irrigation']['frequency_hours']), 0.1)
-    new_settings['irrigation']['duration_minutes'] = st.number_input("灌溉时长 (分钟)", 1, 60, int(settings['irrigation']['duration_minutes']), 1)
+        # 灌溉设置
+        st.subheader("灌溉")
+        new_settings['irrigation']['frequency_hours'] = st.number_input("灌溉频率 (小时)", 0.1, 24.0, float(settings['irrigation']['frequency_hours']), 0.1)
+        new_settings['irrigation']['duration_minutes'] = st.number_input("灌溉时长 (分钟)", 1, 60, int(settings['irrigation']['duration_minutes']), 1)
 
-    # 营养液设置
-    st.subheader("营养液")
-    new_settings['nutrient_solution']['ec_ms_cm'] = st.number_input("电导率 EC (mS/cm)", 0.1, 5.0, float(settings['nutrient_solution']['ec_ms_cm']), 0.1)
-    new_settings['nutrient_solution']['ph'] = st.number_input("pH值", 0.0, 14.0, float(settings['nutrient_solution']['ph']), 0.1)
+        # 营养液设置
+        st.subheader("营养液")
+        new_settings['nutrient_solution']['ec_ms_cm'] = st.number_input("电导率 EC (mS/cm)", 0.1, 5.0, float(settings['nutrient_solution']['ec_ms_cm']), 0.1)
+        new_settings['nutrient_solution']['ph'] = st.number_input("pH值", 0.0, 14.0, float(settings['nutrient_solution']['ph']), 0.1)
 
     # 更新设置
     if st.button("更新设置"):
@@ -129,6 +136,10 @@ def main():
         page_title='室墨司源',
         layout='wide')
     st.title("司源中控平台")
+
+    st.sidebar.image("logo.png", use_column_width=True)
+    
+    #st.title("植物工厂数据查看器和设置编辑器")
 
     conn = st.connection('s3', type=FilesConnection)
 
