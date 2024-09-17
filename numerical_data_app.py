@@ -94,9 +94,9 @@ def data_viewer(df):
     column_groups = {
         '温度': ['Temperature', 'Temperature1', 'Temperature2', 'Temperature3'],
         '湿度': ['Humidity', 'Humidity1', 'Humidity2', 'Humidity3'],
-        'CO2': ['CO2PPM'],
-        '水质': ['pH'],
-        '水位': ['Wlevel']
+        #'CO2': ['CO2PPM'],
+        #'水质': ['pH'],
+        #'水位': ['Wlevel']
     }
 
     # 为每个组创建图表
