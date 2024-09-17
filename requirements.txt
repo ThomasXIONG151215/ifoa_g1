@@ -1,3 +1,5 @@
 plotly
 pandas
 requests
+s3fs
+st-files-connection
