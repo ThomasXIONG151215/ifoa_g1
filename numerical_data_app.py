@@ -4,6 +4,7 @@ import plotly.express as px
 import json
 from datetime import datetime, timedelta
 import os
+from st_files_connection import FilesConnection
 
 def load_data(file_path):
     if os.path.exists(file_path):
@@ -28,13 +29,14 @@ def save_settings(file_path, settings):
 def main():
     st.title("Plant Factory Data Viewer and Settings Editor")
 
+    conn = st.connection('s3', type=FilesConnection)
     # File paths
     data_file = 'integral_data.csv'
     settings_file = 'settings.json'
 
     # Load data and settings
-    df = load_data(data_file)
-    settings = load_settings(settings_file)
+    df = conn.read("ifoag1/integral_data.csv", input_format="csv", ttl=600) #load_data(data_file)
+    settings = conn.read("ifoag1/settings.json", input_format="json", ttl=600)#load_settings(settings_file)
 
     if df is None or settings is None:
         st.error("Failed to load data or settings. Please check your file paths.")
