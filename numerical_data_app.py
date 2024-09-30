@@ -1,9 +1,3 @@
-
-    
-
-
-
-
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -218,7 +212,40 @@ def ai_assistants(df):
         """
         components.html(iframe_html, height=700)
 
+def image_viewer():
+    st.header("图片查看器")
 
+    # 获取可用的单元列表
+    available_units = get_available_units()
+
+    if not available_units:
+        st.warning("没有找到任何图片单元。")
+        return
+
+    # 选择单元编号
+    unit_number = st.selectbox("选择单元编号", available_units)
+
+    # 获取图片列表
+    image_list = get_image_list(unit_number)
+
+    if not image_list:
+        st.warning(f"单元 {unit_number} 没有可用的图片。")
+        return
+
+    # 创建时间滑块
+    if len(image_list) > 1:
+        index = st.slider("选择图片时间", 0, len(image_list) - 1, len(image_list) - 1)
+    else:
+        index = 0
+
+    # 显示选中的图片
+    image_key, image_date = image_list[index]
+    image_url = s3_client.generate_presigned_url('get_object',
+                                                 Params={'Bucket': S3_BUCKET_NAME,
+                                                         'Key': image_key},
+                                                 ExpiresIn=3600)
+    st.image(image_url)
+    st.write(f"图片日期: {image_date}")
 # Main function
 def main():
     st.set_page_config(page_title='室墨司源', layout='wide')
