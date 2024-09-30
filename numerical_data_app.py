@@ -218,7 +218,40 @@ def data_viewer(df):
         file_name="plant_factory_data.csv",
         mime="text/csv",
     )
-    
+
+def image_viewer(conn):
+    st.header("图片查看器")
+
+    # 选择单元编号
+    unit_number = st.selectbox("选择单元编号", range(8))  # 0-7
+
+    # 获取图片列表
+    image_list = get_image_list(conn, unit_number)
+
+    if not image_list:
+        st.warning(f"单元 {unit_number} 没有可用的图片。")
+        return
+
+    # 创建时间滑块
+    if len(image_list) > 1:
+        index = st.slider("选择图片时间", 0, len(image_list) - 1, len(image_list) - 1)
+    else:
+        index = 0
+
+    # 显示选中的图片
+    image_url = image_list[index]
+    st.image(image_url, use_column_width=True)
+
+def get_image_list(conn, unit_number):
+    try:
+        # 假设图片存储在 "ifoag1/images/unit_{unit_number}/" 目录下
+        prefix = f"images/unit_{unit_number}/"
+        result = conn.list(f"ifoag1/{prefix}")
+        image_list = [f"s3://ifoag1/{item['Key']}" for item in result if item['Key'].lower().endswith(('.png', '.jpg', '.jpeg'))]
+        return sorted(image_list, reverse=True)  # 最新的图片在前
+    except Exception as e:
+        st.error(f"获取图片列表时出错: {str(e)}")
+        return []
 
 def main():
     st.set_page_config(
@@ -227,8 +260,6 @@ def main():
     st.title("司源中控平台")
 
     st.sidebar.image("logo.svg", use_column_width=True)
-    
-    #st.title("植物工厂数据查看器和设置编辑器")
 
     conn = st.connection('s3', type=FilesConnection)
 
@@ -240,8 +271,8 @@ def main():
         st.error("加载设置失败。请检查您的S3配置。")
         return
 
-    # 为设置编辑器和数据查看器创建标签页
-    tab1, tab2, tab3 = st.tabs(["设置编辑器", "数据查看器", "AI助手团"])
+    # 为设置编辑器、数据查看器、AI助手团和图片查看器创建标签页
+    tab1, tab2, tab3, tab4 = st.tabs(["设置编辑器", "数据查看器", "AI助手团", "图片查看器"])
 
     with tab1:
         settings_editor(conn, settings)
@@ -251,6 +282,9 @@ def main():
 
     with tab3:
         ai_assistants(df)
+
+    with tab4:
+        image_viewer(conn)
 
 if __name__ == "__main__":
     main()
