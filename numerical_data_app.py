@@ -200,6 +200,43 @@ def data_viewer(df):
     )
 
 
+
+def get_available_units():
+    try:
+        response = s3_client.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix="images/", Delimiter='/')
+        units = [prefix.strip('/').split('/')[-1] for prefix in response.get('CommonPrefixes', [])]
+        return sorted(units)
+    except ClientError as e:
+        st.error(f"获取可用单元列表时出错: {str(e)}")
+        return []
+
+def get_image_list(unit_number):
+    try:
+        prefix = f"images/{unit_number}/"
+        response = s3_client.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix=prefix)
+        
+        image_list = []
+        for item in response.get('Contents', []):
+            if item['Key'].lower().endswith(('.png', '.jpg', '.jpeg')):
+                date = extract_date_from_filename(item['Key'])
+                if date:
+                    image_list.append((item['Key'], date))
+        
+        # 根据日期排序，最新的在前
+        return sorted(image_list, key=lambda x: x[1], reverse=True)
+    except ClientError as e:
+        st.error(f"获取图片列表时出错: {str(e)}")
+        return []
+
+def extract_date_from_filename(filename):
+    # 假设文件名格式为 "YYYY-MM-DD_HH-MM-SS.jpg"
+    pattern = r"(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})"
+    match = re.search(pattern, filename)
+    if match:
+        date_str = match.group(1)
+        return datetime.strptime(date_str, "%Y-%m-%d_%H-%M-%S")
+    return None
+
 def ai_assistants(df):
     agent_data_analyst = create_pandas_dataframe_agent(langchain_llm, df, verbose=True, allow_dangerous_code=True)
     with st.container(height=700):
