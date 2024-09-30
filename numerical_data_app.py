@@ -1,13 +1,43 @@
+
+    
+
+
+
+
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 import json
-from datetime import datetime, timedelta
-import os
+from datetime import datetime
+import boto3
+from botocore.exceptions import ClientError
+import re
 from st_files_connection import FilesConnection
 import streamlit.components.v1 as components
+from langchain_community.llms import Tongyi
+from langchain_community.llms.moonshot import Moonshot
+from langchain_experimental.agents import create_pandas_dataframe_agent
 
+# AWS and S3 configuration
+AWS_ACCESS_KEY_ID = st.secrets["AWS_ACCESS_KEY_ID"]
+AWS_SECRET_ACCESS_KEY = st.secrets["AWS_SECRET_ACCESS_KEY"]
+AWS_DEFAULT_REGION = st.secrets["AWS_DEFAULT_REGION"]
+S3_BUCKET_NAME = "ifoag1"
+
+s3_client = boto3.client('s3', 
+                         aws_access_key_id=AWS_ACCESS_KEY_ID,
+                         aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+                         region_name=AWS_DEFAULT_REGION)
+
+# LLM configuration
+langchain_llm = Tongyi(temperature=0,
+                       api_key="sk-a36dbf13c32f4b28a7dfc3ba81275fa8",
+                       base_url="https://dashscope.aliyuncs.com/compatible-mode/v1")
+
+moonshot_llm = Moonshot(model="moonshot-v1-128k",
+                        api_key="sk-wQJ6rfZixFKs8eKyPmAzXBfS1qdObnPbCIEoMyr6nq3i4IMd")
+
+# Data loading functions
 def load_data(conn):
     try:
         return conn.read("ifoag1/integral_data.csv", input_format="csv", ttl=600)
@@ -30,25 +60,6 @@ def save_settings(conn, settings):
         st.error(f"更新设置失败: {str(e)}")
 
 
-from langchain_community.llms import Tongyi
-from langchain_community.llms.moonshot import Moonshot
-from langchain_experimental.agents import create_pandas_dataframe_agent
-from dashscope import MultiModalConversation
-from langchain_community.document_loaders import UnstructuredMarkdownLoader
-from langchain_core.documents import Document
-
-#os.environ["DASHSCOPE_API_KEY"] = "sk-a36dbf13c32f4b28a7dfc3ba81275fa8"
-#os.environ["MOONSHOT_API_KEY"] = "sk-wQJ6rfZixFKs8eKyPmAzXBfS1qdObnPbCIEoMyr6nq3i4IMd"
-
-#llms agents
-langchain_llm = Tongyi(temperature = 0,
-                     api_key="sk-a36dbf13c32f4b28a7dfc3ba81275fa8",
-                     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
-                     )
-
-moonshot_llm = Moonshot(model="moonshot-v1-128k",
-                       api_key="sk-wQJ6rfZixFKs8eKyPmAzXBfS1qdObnPbCIEoMyr6nq3i4IMd"
-                       ) 
 
 @st.cache_data 
 def data_analysis(agent_data_analyst):
@@ -82,31 +93,6 @@ def data_analysis(agent_data_analyst):
     message.write(summary)
     
     return combined_info, summary
-
-def ai_assistants(df):
-    
-    agent_data_analyst = create_pandas_dataframe_agent(langchain_llm, df, verbose=True,allow_dangerous_code=True)
-
-    #st.subheader("数据分析兔")
-    #if "messages" not in st.session_state.keys(): # Initialize the chat message history
-        
-    #    st.session_state.messages = [
-    #        {"role": "assistant", "content": "Ask me a question about Streamlit's open-source Python library!"}
-    #    ]
-    #with st.container(height=700):
-    #    combined_info, summary = data_analysis(agent_data_analyst)
-        
-    #st.subheader("助理农艺兔")
-    
-    with st.container(height=700):
-        iframe_html = """
-        <iframe src="https://udify.app/chatbot/QLSY0P3UgKlOifoO" 
-                style="width: 100%; height: 700px;" 
-                frameborder="0" 
-                allow="microphone">
-        </iframe>
-        """
-        components.html(iframe_html, height=700)
 
 def settings_editor(conn, settings):
     new_settings = settings.copy()
@@ -218,116 +204,42 @@ def data_viewer(df):
         file_name="plant_factory_data.csv",
         mime="text/csv",
     )
-    
-import streamlit as st
-import boto3
-from botocore.exceptions import ClientError
-from datetime import datetime
-import re
 
-# 使用 Streamlit secrets 获取 AWS 凭证
-AWS_ACCESS_KEY_ID = st.secrets["AWS_ACCESS_KEY_ID"]
-AWS_SECRET_ACCESS_KEY = st.secrets["AWS_SECRET_ACCESS_KEY"]
-AWS_DEFAULT_REGION = st.secrets["AWS_DEFAULT_REGION"]
-S3_BUCKET_NAME = "ifoag1"
 
-s3_client = boto3.client('s3', 
-                         aws_access_key_id=AWS_ACCESS_KEY_ID,
-                         aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-                         region_name=AWS_DEFAULT_REGION)
+def ai_assistants(df):
+    agent_data_analyst = create_pandas_dataframe_agent(langchain_llm, df, verbose=True, allow_dangerous_code=True)
+    with st.container(height=700):
+        iframe_html = """
+        <iframe src="https://udify.app/chatbot/QLSY0P3UgKlOifoO" 
+                style="width: 100%; height: 700px;" 
+                frameborder="0" 
+                allow="microphone">
+        </iframe>
+        """
+        components.html(iframe_html, height=700)
 
-def image_viewer():
-    st.header("图片查看器")
 
-    # 获取可用的单元列表
-    available_units = get_available_units()
-
-    if not available_units:
-        st.warning("没有找到任何图片单元。")
-        return
-
-    # 选择单元编号
-    unit_number = st.selectbox("选择单元编号", available_units)
-
-    # 获取图片列表
-    image_list = get_image_list(unit_number)
-
-    if not image_list:
-        st.warning(f"单元 {unit_number} 没有可用的图片。")
-        return
-
-    # 创建时间滑块
-    if len(image_list) > 1:
-        index = st.slider("选择图片时间", 0, len(image_list) - 1, len(image_list) - 1)
-    else:
-        index = 0
-
-    # 显示选中的图片
-    image_key, image_date = image_list[index]
-    image_url = s3_client.generate_presigned_url('get_object',
-                                                 Params={'Bucket': S3_BUCKET_NAME,
-                                                         'Key': image_key},
-                                                 ExpiresIn=3600)
-    st.image(image_url)
-    st.write(f"图片日期: {image_date}")
-
-def get_available_units():
-    try:
-        response = s3_client.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix="images/", Delimiter='/')
-        units = [prefix.strip('/').split('/')[-1] for prefix in response.get('CommonPrefixes', [])]
-        return sorted(units)
-    except ClientError as e:
-        st.error(f"获取可用单元列表时出错: {str(e)}")
-        return []
-
-def get_image_list(unit_number):
-    try:
-        prefix = f"images/{unit_number}/"
-        response = s3_client.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix=prefix)
-        
-        image_list = []
-        for item in response.get('Contents', []):
-            if item['Key'].lower().endswith(('.png', '.jpg', '.jpeg')):
-                date = extract_date_from_filename(item['Key'])
-                if date:
-                    image_list.append((item['Key'], date))
-        
-        # 根据日期排序，最新的在前
-        return sorted(image_list, key=lambda x: x[1], reverse=True)
-    except ClientError as e:
-        st.error(f"获取图片列表时出错: {str(e)}")
-        return []
-
-def extract_date_from_filename(filename):
-    # 假设文件名格式为 "YYYY-MM-DD_HH-MM-SS.jpg"
-    pattern = r"(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})"
-    match = re.search(pattern, filename)
-    if match:
-        date_str = match.group(1)
-        return datetime.strptime(date_str, "%Y-%m-%d_%H-%M-%S")
-    return None
-
+# Main function
 def main():
-    st.set_page_config(
-        page_title='室墨司源',
-        layout='wide')
+    st.set_page_config(page_title='室墨司源', layout='wide')
     st.title("司源中控平台")
-
     st.sidebar.image("logo.svg", use_column_width=True)
-
-    # 加载数据和设置
+    
+    conn = st.connection('s3', type=FilesConnection)
+    
+    # Load data and settings
     df = load_data(conn)
-    settings = load_settings()
+    settings = load_settings(conn)
 
     if settings is None:
         st.error("加载设置失败。请检查您的S3配置。")
         return
 
-    # 为设置编辑器、数据查看器、AI助手团和图片查看器创建标签页
+    # Create tabs
     tab1, tab2, tab3, tab4 = st.tabs(["设置编辑器", "数据查看器", "AI助手团", "图片查看器"])
 
     with tab1:
-        settings_editor(settings)
+        settings_editor(conn, settings)
 
     with tab2:
         data_viewer(df)
@@ -340,3 +252,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
