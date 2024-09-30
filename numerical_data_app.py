@@ -218,19 +218,39 @@ def data_viewer(df):
         file_name="plant_factory_data.csv",
         mime="text/csv",
     )
+    
 import streamlit as st
-from st_files_connection import FilesConnection
+import boto3
+from botocore.exceptions import ClientError
 from datetime import datetime
 import re
 
-def image_viewer(conn):
+# 使用 Streamlit secrets 获取 AWS 凭证
+AWS_ACCESS_KEY_ID = st.secrets["AWS_ACCESS_KEY_ID"]
+AWS_SECRET_ACCESS_KEY = st.secrets["AWS_SECRET_ACCESS_KEY"]
+AWS_DEFAULT_REGION = st.secrets["AWS_DEFAULT_REGION"]
+S3_BUCKET_NAME = "ifoag1"
+
+s3_client = boto3.client('s3', 
+                         aws_access_key_id=AWS_ACCESS_KEY_ID,
+                         aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+                         region_name=AWS_DEFAULT_REGION)
+
+def image_viewer():
     st.header("图片查看器")
 
+    # 获取可用的单元列表
+    available_units = get_available_units()
+
+    if not available_units:
+        st.warning("没有找到任何图片单元。")
+        return
+
     # 选择单元编号
-    unit_number = st.selectbox("选择单元编号", range(8))  # 0-7
+    unit_number = st.selectbox("选择单元编号", available_units)
 
     # 获取图片列表
-    image_list = get_image_list(conn, unit_number)
+    image_list = get_image_list(unit_number)
 
     if not image_list:
         st.warning(f"单元 {unit_number} 没有可用的图片。")
@@ -243,27 +263,38 @@ def image_viewer(conn):
         index = 0
 
     # 显示选中的图片
-    image_url, image_date = image_list[index]
-    st.image(image_url, use_column_width=True)
+    image_key, image_date = image_list[index]
+    image_url = s3_client.generate_presigned_url('get_object',
+                                                 Params={'Bucket': S3_BUCKET_NAME,
+                                                         'Key': image_key},
+                                                 ExpiresIn=3600)
+    st.image(image_url)
     st.write(f"图片日期: {image_date}")
 
-def get_image_list(conn, unit_number):
+def get_available_units():
     try:
-        # 假设图片存储在 "ifoag1/images/unit_{unit_number}/" 目录下
+        response = s3_client.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix="images/", Delimiter='/')
+        units = [prefix.strip('/').split('/')[-1] for prefix in response.get('CommonPrefixes', [])]
+        return sorted(units)
+    except ClientError as e:
+        st.error(f"获取可用单元列表时出错: {str(e)}")
+        return []
+
+def get_image_list(unit_number):
+    try:
         prefix = f"images/{unit_number}/"
-        result = conn.list(f"ifoag1/{prefix}")
+        response = s3_client.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix=prefix)
         
         image_list = []
-        for item in result:
+        for item in response.get('Contents', []):
             if item['Key'].lower().endswith(('.png', '.jpg', '.jpeg')):
-                image_url = f"s3://ifoag1/{item['Key']}"
                 date = extract_date_from_filename(item['Key'])
                 if date:
-                    image_list.append((image_url, date))
+                    image_list.append((item['Key'], date))
         
         # 根据日期排序，最新的在前
         return sorted(image_list, key=lambda x: x[1], reverse=True)
-    except Exception as e:
+    except ClientError as e:
         st.error(f"获取图片列表时出错: {str(e)}")
         return []
 
@@ -284,11 +315,9 @@ def main():
 
     st.sidebar.image("logo.svg", use_column_width=True)
 
-    conn = st.connection('s3', type=FilesConnection)
-
     # 加载数据和设置
-    df = load_data(conn)
-    settings = load_settings(conn)
+    df = load_data()
+    settings = load_settings()
 
     if settings is None:
         st.error("加载设置失败。请检查您的S3配置。")
@@ -298,7 +327,7 @@ def main():
     tab1, tab2, tab3, tab4 = st.tabs(["设置编辑器", "数据查看器", "AI助手团", "图片查看器"])
 
     with tab1:
-        settings_editor(conn, settings)
+        settings_editor(settings)
 
     with tab2:
         data_viewer(df)
@@ -307,7 +336,7 @@ def main():
         ai_assistants(df)
 
     with tab4:
-        image_viewer(conn)
+        image_viewer()
 
 if __name__ == "__main__":
     main()
