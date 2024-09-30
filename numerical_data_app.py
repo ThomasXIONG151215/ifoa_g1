@@ -204,7 +204,12 @@ def data_viewer(df):
 def get_available_units():
     try:
         response = s3_client.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix="images/", Delimiter='/')
-        units = [prefix.strip('/').split('/')[-1] for prefix in response.get('CommonPrefixes', [])]
+        units = []
+        for prefix in response.get('CommonPrefixes', []):
+            prefix_name = prefix.get('Prefix', '')
+            unit = prefix_name.strip('/').split('/')[-1]
+            if unit:
+                units.append(unit)
         return sorted(units)
     except ClientError as e:
         st.error(f"获取可用单元列表时出错: {str(e)}")
