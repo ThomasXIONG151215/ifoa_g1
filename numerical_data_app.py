@@ -250,7 +250,7 @@ def image_viewer(conn):
 def get_image_list(conn, unit_number):
     try:
         # 假设图片存储在 "ifoag1/images/unit_{unit_number}/" 目录下
-        prefix = f"images/unit_{unit_number}/"
+        prefix = f"images/{unit_number}/"
         result = conn.list(f"ifoag1/{prefix}")
         
         image_list = []
