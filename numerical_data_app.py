@@ -316,7 +316,7 @@ def main():
     st.sidebar.image("logo.svg", use_column_width=True)
 
     # 加载数据和设置
-    df = load_data()
+    df = load_data(conn)
     settings = load_settings()
 
     if settings is None:
