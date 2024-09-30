@@ -218,6 +218,10 @@ def data_viewer(df):
         file_name="plant_factory_data.csv",
         mime="text/csv",
     )
+import streamlit as st
+from st_files_connection import FilesConnection
+from datetime import datetime
+import re
 
 def image_viewer(conn):
     st.header("图片查看器")
@@ -239,19 +243,38 @@ def image_viewer(conn):
         index = 0
 
     # 显示选中的图片
-    image_url = image_list[index]
+    image_url, image_date = image_list[index]
     st.image(image_url, use_column_width=True)
+    st.write(f"图片日期: {image_date}")
 
 def get_image_list(conn, unit_number):
     try:
         # 假设图片存储在 "ifoag1/images/unit_{unit_number}/" 目录下
-        prefix = f"images/{unit_number}/"
+        prefix = f"images/unit_{unit_number}/"
         result = conn.list(f"ifoag1/{prefix}")
-        image_list = [f"s3://ifoag1/{item['Key']}" for item in result if item['Key'].lower().endswith(('.png', '.jpg', '.jpeg'))]
-        return sorted(image_list, reverse=True)  # 最新的图片在前
+        
+        image_list = []
+        for item in result:
+            if item['Key'].lower().endswith(('.png', '.jpg', '.jpeg')):
+                image_url = f"s3://ifoag1/{item['Key']}"
+                date = extract_date_from_filename(item['Key'])
+                if date:
+                    image_list.append((image_url, date))
+        
+        # 根据日期排序，最新的在前
+        return sorted(image_list, key=lambda x: x[1], reverse=True)
     except Exception as e:
         st.error(f"获取图片列表时出错: {str(e)}")
         return []
+
+def extract_date_from_filename(filename):
+    # 假设文件名格式为 "YYYY-MM-DD_HH-MM-SS.jpg"
+    pattern = r"(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})"
+    match = re.search(pattern, filename)
+    if match:
+        date_str = match.group(1)
+        return datetime.strptime(date_str, "%Y-%m-%d_%H-%M-%S")
+    return None
 
 def main():
     st.set_page_config(
