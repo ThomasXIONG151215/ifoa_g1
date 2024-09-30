@@ -9,3 +9,4 @@ dashscope
 langchain_experimental
 langchain_core
 tabulate
+boto3
