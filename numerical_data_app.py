@@ -152,11 +152,11 @@ def data_viewer(df):
 
     # 按类型分组列
     column_groups = {
-        '温度': ['Temperature', 'Temperature1', 'Temperature2', 'Temperature3'],
-        '湿度': ['Humidity', 'Humidity1', 'Humidity2', 'Humidity3'],
-        #'CO2': ['CO2PPM'],
-        #'水质': ['pH'],
-        #'水位': ['Wlevel']
+        '温度': ['Temperature', 'Temperature1', 'Temperature2', 'Temperature3','TempA','TempB','TempC','WTEMP'],
+        '湿度': ['Humidity', 'Humidity1', 'Humidity2', 'Humidity3', 'HumiA','HumiB','HumiC'],
+        'CO2': ['CO2PPM','CO2PPM1','CO2PPM2','CO2PPM3','CO2PPMA','CO2PPMB','CO2PPMC'],
+        '水质': ['pH'],
+        '水位': ['Wlevel']
     }
 
     # 为每个组创建图表
