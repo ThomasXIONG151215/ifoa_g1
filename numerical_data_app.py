@@ -215,23 +215,6 @@ def get_available_units():
         st.error(f"获取可用单元列表时出错: {str(e)}")
         return []
 
-def get_image_list(unit_number):
-    try:
-        prefix = f"images/{unit_number}/"
-        response = s3_client.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix=prefix)
-        
-        image_list = []
-        for item in response.get('Contents', []):
-            if item['Key'].lower().endswith(('.png', '.jpg', '.jpeg')):
-                date = extract_date_from_filename(item['Key'])
-                if date:
-                    image_list.append((item['Key'], date))
-        
-        # 根据日期排序，最新的在前
-        return sorted(image_list, key=lambda x: x[1], reverse=True)
-    except ClientError as e:
-        st.error(f"获取图片列表时出错: {str(e)}")
-        return []
 
 def extract_date_from_filename(filename):
     # 假设文件名格式为 "YYYY-MM-DD_HH-MM-SS.jpg"
@@ -254,33 +237,46 @@ def ai_assistants(df):
         """
         components.html(iframe_html, height=700)
 
+def get_image_list(unit_number):
+    try:
+        prefix = f"images/{unit_number}/"
+        response = s3_client.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix=prefix)
+        
+        image_list = []
+        for item in response.get('Contents', []):
+            if item['Key'].lower().endswith(('.png', '.jpg', '.jpeg')):
+                date = extract_date_from_filename(item['Key'])
+                if date:
+                    image_list.append((item['Key'], date))
+        
+        # 根据日期排序，最新的在前
+        return sorted(image_list, key=lambda x: x[1], reverse=True)
+    except ClientError as e:
+        st.error(f"获取图片列表时出错: {str(e)}")
+        return []
+
 def image_viewer():
     st.header("图片查看器")
 
-    # 获取可用的单元列表
     available_units = get_available_units()
 
     if not available_units:
         st.warning("没有找到任何图片单元。")
         return
 
-    # 选择单元编号
     unit_number = st.selectbox("选择单元编号", available_units)
 
-    # 获取图片列表
     image_list = get_image_list(unit_number)
 
     if not image_list:
         st.warning(f"单元 {unit_number} 没有可用的图片。")
         return
 
-    # 创建时间滑块
     if len(image_list) > 1:
-        index = st.slider("选择图片时间", 0, len(image_list) - 1, len(image_list) - 1)
+        index = st.slider("选择图片时间", 0, len(image_list) - 1, 0, key="image_slider")
     else:
         index = 0
 
-    # 显示选中的图片
     image_key, image_date = image_list[index]
     image_url = s3_client.generate_presigned_url('get_object',
                                                  Params={'Bucket': S3_BUCKET_NAME,
@@ -288,7 +284,45 @@ def image_viewer():
                                                  ExpiresIn=3600)
     st.image(image_url)
     st.write(f"图片日期: {image_date}")
-# Main function
+
+def overview_tab(df):
+    st.header("综合概览")
+
+    col1, col2 = st.columns([7, 3])
+
+    with col1:
+        image_viewer()
+
+    with col2:
+        st.subheader("最新环境数据")
+        
+        if df is not None and not df.empty:
+            latest_data = df.iloc[-1]
+            previous_data = df.iloc[-2] if len(df) > 1 else latest_data
+
+            # 温度
+            temperature_diff = latest_data['Temperature'] - previous_data['Temperature']
+            st.metric(label="温度 (°C)", 
+                      value=f"{latest_data['Temperature']:.1f}",
+                      delta=f"{temperature_diff:.1f}")
+
+            # 湿度
+            humidity_diff = latest_data['Humidity'] - previous_data['Humidity']
+            st.metric(label="湿度 (%)", 
+                      value=f"{latest_data['Humidity']:.1f}",
+                      delta=f"{humidity_diff:.1f}")
+
+            # CO2 (如果有的话)
+            if 'CO2PPM' in df.columns:
+                co2_diff = latest_data['CO2PPM'] - previous_data['CO2PPM']
+                st.metric(label="CO2 (ppm)", 
+                          value=f"{latest_data['CO2PPM']:.0f}",
+                          delta=f"{co2_diff:.0f}")
+
+            # 其他可能的指标...
+
+        else:
+            st.warning("无法加载最新的环境数据。")
 def main():
     st.set_page_config(page_title='室墨司源', layout='wide')
     st.title("司源中控平台")
@@ -296,7 +330,6 @@ def main():
     
     conn = st.connection('s3', type=FilesConnection)
     
-    # Load data and settings
     df = load_data(conn)
     settings = load_settings(conn)
 
@@ -304,8 +337,10 @@ def main():
         st.error("加载设置失败。请检查您的S3配置。")
         return
 
-    # Create tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["设置编辑器", "数据查看器", "AI助手团", "图片查看器"])
+    tab0, tab1, tab2, tab3, tab4 = st.tabs(["综合概览", "设置编辑器", "数据查看器", "AI助手团", "图片查看器"])
+
+    with tab0:
+        overview_tab(df)
 
     with tab1:
         settings_editor(conn, settings)
