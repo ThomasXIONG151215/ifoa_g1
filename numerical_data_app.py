@@ -268,7 +268,7 @@ def get_image_list(unit_number):
                 if date:
                     image_list.append((item['Key'], date))
         
-        # 根据日期排序，最新的在前
+        # 根据日期时间排序，最新的在前
         return sorted(image_list, key=lambda x: x[1], reverse=True)
     except ClientError as e:
         st.error(f"获取图片列表时出错: {str(e)}")
@@ -283,7 +283,17 @@ def image_viewer():
         st.warning("没有找到任何图片单元。")
         return
 
-    unit_number = st.selectbox("选择单元编号", available_units)
+    # 使用会话状态来记住选择的单元，但确保它仍然有效
+    if 'selected_unit' not in st.session_state or st.session_state.selected_unit not in available_units:
+        st.session_state.selected_unit = available_units[0]
+
+    unit_number = st.selectbox("选择单元编号", available_units, key='unit_selector', index=available_units.index(st.session_state.selected_unit))
+    
+    # 如果单元改变，重置日期和时间选择
+    if unit_number != st.session_state.selected_unit:
+        st.session_state.selected_unit = unit_number
+        st.session_state.pop('selected_date', None)
+        st.session_state.pop('selected_time', None)
 
     image_list = get_image_list(unit_number)
 
@@ -292,10 +302,19 @@ def image_viewer():
         return
 
     # 获取所有可用的日期
-    available_dates = sorted(set(image.date().strftime("%Y-%m-%d") for _, image in image_list), reverse=True)
+    available_dates = sorted(set(image[1].date() for image in image_list), reverse=True)
+
+    # 使用会话状态来记住选择的日期，但确保它仍然有效
+    if 'selected_date' not in st.session_state or st.session_state.selected_date not in available_dates:
+        st.session_state.selected_date = available_dates[0]
 
     # 日期选择器
-    selected_date = st.date_input("选择日期", value=datetime.strptime(available_dates[0], "%Y-%m-%d").date())
+    selected_date = st.date_input("选择日期", value=st.session_state.selected_date, key='date_selector')
+    
+    # 如果日期改变，重置时间选择
+    if selected_date != st.session_state.selected_date:
+        st.session_state.selected_date = selected_date
+        st.session_state.pop('selected_time', None)
 
     # 筛选选定日期的图片
     filtered_images = [img for img in image_list if img[1].date() == selected_date]
@@ -305,13 +324,22 @@ def image_viewer():
         return
 
     # 获取选定日期的所有可用时间
-    available_times = sorted(set(image.strftime("%H:%M:%S") for _, image in filtered_images), reverse=True)
+    available_times = sorted(set(image[1].time() for image in filtered_images), reverse=True)
+
+    # 使用会话状态来记住选择的时间，但确保它仍然有效
+    if 'selected_time' not in st.session_state or st.session_state.selected_time not in available_times:
+        st.session_state.selected_time = available_times[0]
 
     # 时间选择器
-    selected_time = st.selectbox("选择时间", available_times)
+    selected_time = st.selectbox("选择时间", 
+                                 options=available_times,
+                                 format_func=lambda x: x.strftime("%H:%M:%S"),
+                                 key='time_selector', 
+                                 index=available_times.index(st.session_state.selected_time))
+    st.session_state.selected_time = selected_time
 
     # 找到匹配的图片
-    selected_image = next((img for img in filtered_images if img[1].strftime("%H:%M:%S") == selected_time), None)
+    selected_image = next((img for img in filtered_images if img[1].time() == selected_time), None)
 
     if selected_image:
         image_key, image_date = selected_image
@@ -323,7 +351,6 @@ def image_viewer():
         st.write(f"图片日期时间: {image_date}")
     else:
         st.warning("未找到匹配的图片。")
-
 def overview_tab(df):
     st.header("综合概览")
 
