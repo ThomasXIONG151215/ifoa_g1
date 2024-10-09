@@ -354,11 +354,11 @@ def main():
         st.error("加载设置失败。请检查您的S3配置。")
         return
 
-    tab0, tab1, tab2, tab3, 
-    #tab4 
-                    = st.tabs(["综合概览", "设置编辑器", "数据查看器", "AI助手团", 
-                              # "图片查看器"
+    tab0, tab1, tab2, tab3,  = st.tabs(["综合概览", "设置编辑器", "数据查看器", "AI助手团", #"图片查看器"
                               ])
+    #tab4 
+                   
+
 
     with tab0:
         overview_tab(df)
