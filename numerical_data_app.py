@@ -131,6 +131,7 @@ def settings_editor(conn, settings):
     if st.button("更新设置"):
         save_settings(conn, new_settings)
         
+
 def data_viewer(df):
     st.header("数据查看器")
     
@@ -150,12 +151,25 @@ def data_viewer(df):
     mask = (df['DateTime'].dt.date >= start_date) & (df['DateTime'].dt.date <= end_date)
     filtered_df = df.loc[mask]
 
+    # 数据清理函数
+    def clean_data(series):
+        # 移除-1值
+        series = series[series != -1]
+        
+        # 移除异常值（使用IQR方法）
+        Q1 = series.quantile(0.25)
+        Q3 = series.quantile(0.75)
+        IQR = Q3 - Q1
+        lower_bound = Q1 - 1.5 * IQR
+        upper_bound = Q3 + 1.5 * IQR
+        return series[(series >= lower_bound) & (series <= upper_bound)]
+
     # 按类型分组列
     column_groups = {
         '温度': ['Temperature', 'Temperature1', 'Temperature2', 'Temperature3','TempA','TempB','TempC','WTEMP'],
         '湿度': ['Humidity', 'Humidity1', 'Humidity2', 'Humidity3', 'HumiA','HumiB','HumiC'],
         'CO2': ['CO2PPM','CO2PPM1','CO2PPM2','CO2PPM3','CO2PPMA','CO2PPMB','CO2PPMC'],
-        '水质': ['pH'],
+        '水质': ['pH', 'EC'],  # 添加EC
         '水位': ['Wlevel']
     }
 
@@ -165,20 +179,25 @@ def data_viewer(df):
         valid_data = False
         for column in columns:
             if column in filtered_df.columns:
-                y_data = filtered_df[column].dropna()
-                if not y_data.empty:
-                    fig.add_trace(go.Scatter(x=filtered_df['DateTime'], y=y_data, mode='lines', name=column))
+                # 清理数据
+                clean_series = clean_data(filtered_df[column])
+                if not clean_series.empty:
+                    fig.add_trace(go.Scatter(x=filtered_df.loc[clean_series.index, 'DateTime'], 
+                                             y=clean_series, 
+                                             mode='lines', 
+                                             name=column))
                     valid_data = True
         
         if valid_data:
             y_max = max([trace.y.max() for trace in fig.data])
+            y_min = min([trace.y.min() for trace in fig.data])
             fig.update_layout(
                 title=f'{group}数据',
                 xaxis_title='日期时间',
                 yaxis_title='数值',
-                yaxis=dict(range=[0, y_max * 1.1]),  # 设置y轴从0开始
+                yaxis=dict(range=[max(0, y_min * 0.9), y_max * 1.1]),  # 调整y轴范围，确保不会出现负值
                 legend_title='传感器',
-                height=600,  # 增加高度以提高可视性
+                height=600,
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
             st.plotly_chart(fig, use_container_width=True)
@@ -192,12 +211,12 @@ def data_viewer(df):
 
     # 添加数据下载按钮
     csv = filtered_df.to_csv(index=False)
-    st.download_button(
-        label="下载CSV数据",
-        data=csv,
-        file_name="plant_factory_data.csv",
-        mime="text/csv",
-    )
+    #st.download_button(
+    #    label="下载CSV数据",
+    #    data=csv,
+    #    file_name="plant_factory_data.csv",
+    #    mime="text/csv",
+    #)
 
 
 
