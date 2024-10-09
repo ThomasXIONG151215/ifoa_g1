@@ -319,14 +319,31 @@ def overview_tab(df):
                           value=f"{latest_data['CO2PPM']:.0f}",
                           delta=f"{co2_diff:.0f}")
 
-            # 其他可能的指标...
+            # pH值
+            if 'pH' in df.columns:
+                ph_diff = latest_data['pH'] - previous_data['pH']
+                ph_value = latest_data['pH']
+                st.metric(label="pH值", 
+                          value=f"{ph_value:.2f}",
+                          delta=f"{ph_diff:.2f}")
+                
+                # pH警告
+                if ph_value < 5 or ph_value > 7:
+                    st.warning(f"警告：pH值 ({ph_value:.2f}) 超出正常范围 (5-7)!")
+
+            # EC值
+            if 'EC' in df.columns:
+                ec_diff = latest_data['EC'] - previous_data['EC']
+                st.metric(label="EC值 (mS/cm)", 
+                          value=f"{latest_data['EC']:.2f}",
+                          delta=f"{ec_diff:.2f}")
 
         else:
             st.warning("无法加载最新的环境数据。")
 def main():
     st.set_page_config(page_title='室墨司源', layout='wide')
     st.title("司源中控平台")
-    st.sidebar.image("logo.svg", use_column_width=True)
+    #st.sidebar.image("logo.svg", use_column_width=True)
     
     conn = st.connection('s3', type=FilesConnection)
     
