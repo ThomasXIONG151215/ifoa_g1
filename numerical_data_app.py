@@ -17,7 +17,7 @@ AWS_ACCESS_KEY_ID = st.secrets["AWS_ACCESS_KEY_ID"]
 AWS_SECRET_ACCESS_KEY = st.secrets["AWS_SECRET_ACCESS_KEY"]
 AWS_DEFAULT_REGION = st.secrets["AWS_DEFAULT_REGION"]
 S3_BUCKET_NAME = "ifoag1"
-
+print('test')
 s3_client = boto3.client('s3', 
                          aws_access_key_id=AWS_ACCESS_KEY_ID,
                          aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
