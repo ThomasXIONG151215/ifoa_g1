@@ -11,13 +11,14 @@ import streamlit.components.v1 as components
 from langchain_community.llms import Tongyi
 from langchain_community.llms.moonshot import Moonshot
 from langchain_experimental.agents import create_pandas_dataframe_agent
+st.set_page_config(page_title='室墨司源', layout='wide')
 
 # AWS and S3 configuration
 AWS_ACCESS_KEY_ID = st.secrets["AWS_ACCESS_KEY_ID"]
 AWS_SECRET_ACCESS_KEY = st.secrets["AWS_SECRET_ACCESS_KEY"]
 AWS_DEFAULT_REGION = st.secrets["AWS_DEFAULT_REGION"]
 S3_BUCKET_NAME = "ifoag1"
-print('test')
+
 s3_client = boto3.client('s3', 
                          aws_access_key_id=AWS_ACCESS_KEY_ID,
                          aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
@@ -468,7 +469,7 @@ def init_background_task():
 
 
 def main():
-    st.set_page_config(page_title='室墨司源', layout='wide')
+    #st.set_page_config(page_title='室墨司源', layout='wide')
     st.title("司源中控平台")
     #st.sidebar.image("logo.svg", use_column_width=True)
     
