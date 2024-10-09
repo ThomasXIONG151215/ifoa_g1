@@ -255,19 +255,45 @@ def ai_assistants(df):
         </iframe>
         """
         components.html(iframe_html, height=700)
+def get_available_units():
+    try:
+        response = s3_client.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix="images/", Delimiter='/')
+        units = []
+        for prefix in response.get('CommonPrefixes', []):
+            prefix_name = prefix.get('Prefix', '')
+            unit = prefix_name.strip('/').split('/')[-1]
+            if unit:
+                units.append(unit)
+        return sorted(units)
+    except ClientError as e:
+        st.error(f"获取可用单元列表时出错: {str(e)}")
+        return []
+
+def extract_date_from_filename(filename):
+    pattern = r"(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})"
+    match = re.search(pattern, filename)
+    if match:
+        date_str = match.group(1)
+        return datetime.strptime(date_str, "%Y-%m-%d_%H-%M-%S")
+    return None
+
 def get_image_list(unit_number):
     try:
         prefix = f"images/{unit_number}/"
-        response = s3_client.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix=prefix)
+        paginator = s3_client.get_paginator('list_objects_v2')
+        pages = paginator.paginate(Bucket=S3_BUCKET_NAME, Prefix=prefix)
         
         image_list = []
-        for item in response.get('Contents', []):
-            key = item['Key']
-            if key.lower().endswith(('.png', '.jpg', '.jpeg')) and (key.split('/')[-1].startswith('img') or key.split('/')[-1].startswith('img_dst')):
-                date = extract_date_from_filename(key)
-                if date:
-                    image_type = 'original' if key.split('/')[-1].startswith('img') else 'processed'
-                    image_list.append((key, date, image_type))
+        for page in pages:
+            for item in page.get('Contents', []):
+                key = item['Key']
+                if key.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    filename = key.split('/')[-1]
+                    if filename.startswith('img') or filename.startswith('img_dst'):
+                        date = extract_date_from_filename(key)
+                        if date:
+                            image_type = 'original' if filename.startswith('img') and not filename.startswith('img_dst') else 'processed'
+                            image_list.append((key, date, image_type))
         
         # 根据日期时间排序，最新的在前
         return sorted(image_list, key=lambda x: x[1], reverse=True)
