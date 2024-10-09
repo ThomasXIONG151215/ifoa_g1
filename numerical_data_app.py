@@ -283,7 +283,17 @@ def image_viewer():
         st.warning("没有找到任何图片单元。")
         return
 
-    unit_number = st.selectbox("选择单元编号", available_units)
+    # 使用会话状态来记住选择的单元，但确保它仍然有效
+    if 'selected_unit' not in st.session_state or st.session_state.selected_unit not in available_units:
+        st.session_state.selected_unit = available_units[0]
+
+    unit_number = st.selectbox("选择单元编号", available_units, key='unit_selector', index=available_units.index(st.session_state.selected_unit))
+    
+    # 如果单元改变，重置日期和时间选择
+    if unit_number != st.session_state.selected_unit:
+        st.session_state.selected_unit = unit_number
+        st.session_state.pop('selected_date', None)
+        st.session_state.pop('selected_time', None)
 
     image_list = get_image_list(unit_number)
 
@@ -291,18 +301,53 @@ def image_viewer():
         st.warning(f"单元 {unit_number} 没有可用的图片。")
         return
 
-    if len(image_list) > 1:
-        index = st.slider("选择图片时间", 0, len(image_list) - 1, 0, key="image_slider")
-    else:
-        index = 0
+    # 获取所有可用的日期
+    available_dates = sorted(set(image.date().strftime("%Y-%m-%d") for _, image in image_list), reverse=True)
 
-    image_key, image_date = image_list[index]
-    image_url = s3_client.generate_presigned_url('get_object',
-                                                 Params={'Bucket': S3_BUCKET_NAME,
-                                                         'Key': image_key},
-                                                 ExpiresIn=3600)
-    st.image(image_url)
-    st.write(f"图片日期: {image_date}")
+    # 使用会话状态来记住选择的日期，但确保它仍然有效
+    if 'selected_date' not in st.session_state or st.session_state.selected_date not in available_dates:
+        st.session_state.selected_date = available_dates[0]
+
+    # 日期选择器
+    selected_date = st.date_input("选择日期", value=datetime.strptime(st.session_state.selected_date, "%Y-%m-%d").date(), key='date_selector')
+    selected_date_str = selected_date.strftime("%Y-%m-%d")
+    
+    # 如果日期改变，重置时间选择
+    if selected_date_str != st.session_state.selected_date:
+        st.session_state.selected_date = selected_date_str
+        st.session_state.pop('selected_time', None)
+
+    # 筛选选定日期的图片
+    filtered_images = [img for img in image_list if img[1].date() == selected_date]
+
+    if not filtered_images:
+        st.warning(f"在 {selected_date} 没有可用的图片。")
+        return
+
+    # 获取选定日期的所有可用时间
+    available_times = sorted(set(image.strftime("%H:%M:%S") for _, image in filtered_images), reverse=True)
+
+    # 使用会话状态来记住选择的时间，但确保它仍然有效
+    if 'selected_time' not in st.session_state or st.session_state.selected_time not in available_times:
+        st.session_state.selected_time = available_times[0]
+
+    # 时间选择器
+    selected_time = st.selectbox("选择时间", available_times, key='time_selector', index=available_times.index(st.session_state.selected_time))
+    st.session_state.selected_time = selected_time
+
+    # 找到匹配的图片
+    selected_image = next((img for img in filtered_images if img[1].strftime("%H:%M:%S") == selected_time), None)
+
+    if selected_image:
+        image_key, image_date = selected_image
+        image_url = s3_client.generate_presigned_url('get_object',
+                                                     Params={'Bucket': S3_BUCKET_NAME,
+                                                             'Key': image_key},
+                                                     ExpiresIn=3600)
+        st.image(image_url)
+        st.write(f"图片日期时间: {image_date}")
+    else:
+        st.warning("未找到匹配的图片。")
 
 def overview_tab(df):
     st.header("综合概览")
