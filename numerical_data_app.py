@@ -442,31 +442,59 @@ def overview_tab(df):
 
         else:
             st.warning("无法加载最新的环境数据。")
+
+
+
+import time
+import threading
+
+
+
+conn = st.connection('s3', type=FilesConnection)
+
+
+
+@st.cache_resource
+def init_background_task():
+    def update_data():
+        while True:
+            st.session_state.df = load_data(conn)
+            time.sleep(60)
+    
+    thread = threading.Thread(target=update_data, daemon=True)
+    thread.start()
+    return thread
+
+
+
 def main():
     st.set_page_config(page_title='室墨司源', layout='wide')
     st.title("司源中控平台")
     #st.sidebar.image("logo.svg", use_column_width=True)
     
-    conn = st.connection('s3', type=FilesConnection)
     
-    df = load_data(conn)
+    init_background_task()
+    df = st.session_state.get('df')
+    
     settings = load_settings(conn)
 
     if settings is None:
         st.error("加载设置失败。请检查您的S3配置。")
         return
 
-    tab0, tab1, tab2, tab3,  = st.tabs(["综合概览", "设置编辑器", "数据查看器", "AI助手团", #"图片查看器"
+    tab0,  tab2, tab3,  = st.tabs(["综合概览", "数据查看器", "AI助手团", #"图片查看器"
                               ])
     #tab4 
                    
 
-
     with tab0:
-        overview_tab(df)
+        if df is not None:            
+            overview_tab(df)
+        else:
+            st.info("数据正在加载中...")
 
-    with tab1:
-        settings_editor(conn, settings)
+    #with tab1:
+    #    settings_editor(conn, settings)
 
     with tab2:
         data_viewer(df)
