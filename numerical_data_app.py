@@ -255,7 +255,6 @@ def ai_assistants(df):
         </iframe>
         """
         components.html(iframe_html, height=700)
-
 def get_image_list(unit_number):
     try:
         prefix = f"images/{unit_number}/"
@@ -263,10 +262,12 @@ def get_image_list(unit_number):
         
         image_list = []
         for item in response.get('Contents', []):
-            if item['Key'].lower().endswith(('.png', '.jpg', '.jpeg')):
-                date = extract_date_from_filename(item['Key'])
+            key = item['Key']
+            if key.lower().endswith(('.png', '.jpg', '.jpeg')) and (key.split('/')[-1].startswith('img') or key.split('/')[-1].startswith('img_dst')):
+                date = extract_date_from_filename(key)
                 if date:
-                    image_list.append((item['Key'], date))
+                    image_type = 'original' if key.split('/')[-1].startswith('img') else 'processed'
+                    image_list.append((key, date, image_type))
         
         # 根据日期时间排序，最新的在前
         return sorted(image_list, key=lambda x: x[1], reverse=True)
@@ -339,18 +340,27 @@ def image_viewer():
     st.session_state.selected_time = selected_time
 
     # 找到匹配的图片
-    selected_image = next((img for img in filtered_images if img[1].time() == selected_time), None)
+    matching_images = [img for img in filtered_images if img[1].time() == selected_time]
 
-    if selected_image:
-        image_key, image_date = selected_image
-        image_url = s3_client.generate_presigned_url('get_object',
-                                                     Params={'Bucket': S3_BUCKET_NAME,
-                                                             'Key': image_key},
-                                                     ExpiresIn=3600)
-        st.image(image_url)
-        st.write(f"图片日期时间: {image_date}")
+    if matching_images:
+        col1, col2 = st.columns(2)
+        for img in matching_images:
+            image_key, image_date, image_type = img
+            image_url = s3_client.generate_presigned_url('get_object',
+                                                         Params={'Bucket': S3_BUCKET_NAME,
+                                                                 'Key': image_key},
+                                                         ExpiresIn=3600)
+            if image_type == 'original':
+                with col1:
+                    st.image(image_url)
+                    st.write(f"原始图片: {image_date}")
+            else:
+                with col2:
+                    st.image(image_url)
+                    st.write(f"处理后图片: {image_date}")
     else:
         st.warning("未找到匹配的图片。")
+      
 def overview_tab(df):
     st.header("综合概览")
 
