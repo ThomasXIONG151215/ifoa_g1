@@ -504,7 +504,7 @@ def main():
     # 添加自动刷新功能
     st.write("页面将每5分钟自动刷新一次")
     time.sleep(300)  # 等待5分钟
-    st.experimental_rerun()  # 重新运行整个应用
+    st.rerun()  # 重新运行整个应用
 
 if __name__ == "__main__":
     main()
