@@ -463,7 +463,7 @@ import threading
 
 
 
-conn = st.connection('s3', type=FilesConnection)
+#conn = st.connection('s3', type=FilesConnection)
 
 
 def main():
@@ -478,7 +478,7 @@ def main():
         return
 
     # 创建标签页
-    tab0, tab1, tab2, tab3 = st.tabs(["综合概览", "设置编辑器", "数据查看器", "AI助手团"])
+    tab0, tab2, tab3 = st.tabs(["综合概览", "数据查看器", "AI助手团"])
 
     # 添加刷新按钮
     if st.button("刷新数据"):
@@ -491,8 +491,8 @@ def main():
         with tab0:
             overview_tab(df)
 
-        with tab1:
-            settings_editor(conn, settings)
+        #with tab1:
+        #    settings_editor(conn, settings)
 
         with tab2:
             data_viewer(df)
