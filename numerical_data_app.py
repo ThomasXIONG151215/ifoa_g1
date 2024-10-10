@@ -33,10 +33,10 @@ moonshot_llm = Moonshot(model="moonshot-v1-128k",
                         api_key="sk-wQJ6rfZixFKs8eKyPmAzXBfS1qdObnPbCIEoMyr6nq3i4IMd")
 
 # Data loading functions
-@st.cache_data(ttl=60) 
+
 def load_data(conn):
     try:
-        return conn.read("integral_data2.csv", input_format="csv", ttl=600)
+        return conn.read("ifoag1/integral_data2.csv", input_format="csv", ttl=600)
     except Exception as e:
         st.error(f"从S3加载数据时出错: {str(e)}")
         return None
