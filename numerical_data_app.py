@@ -11,6 +11,7 @@ import streamlit.components.v1 as components
 from langchain_community.llms import Tongyi
 from langchain_community.llms.moonshot import Moonshot
 from langchain_experimental.agents import create_pandas_dataframe_agent
+import numpy as np
 st.set_page_config(page_title='室墨司源', layout='wide')
 
 # AWS and S3 configuration
