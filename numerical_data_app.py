@@ -43,7 +43,7 @@ def load_data(conn):
 
 def load_settings(conn):
     try:
-        return conn.read("settings.json", input_format="json", ttl=600)
+        return conn.read("ifoag1/settings.json", input_format="json", ttl=600)
     except Exception as e:
         st.error(f"从S3加载设置时出错: {str(e)}")
         return None
