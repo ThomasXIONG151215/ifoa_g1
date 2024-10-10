@@ -12,7 +12,7 @@ from langchain_community.llms import Tongyi
 from langchain_community.llms.moonshot import Moonshot
 from langchain_experimental.agents import create_pandas_dataframe_agent
 st.set_page_config(page_title='室墨司源', layout='wide')
-st.write('test')
+
 # AWS and S3 configuration
 AWS_ACCESS_KEY_ID = st.secrets["AWS_ACCESS_KEY_ID"]
 AWS_SECRET_ACCESS_KEY = st.secrets["AWS_SECRET_ACCESS_KEY"]
@@ -36,7 +36,7 @@ moonshot_llm = Moonshot(model="moonshot-v1-128k",
 @st.cache_data(ttl=60) 
 def load_data(conn):
     try:
-        return conn.read("ifoag1/integral_data2.csv", input_format="csv", ttl=600)
+        return conn.read("integral_data2.csv", input_format="csv", ttl=600)
     except Exception as e:
         st.error(f"从S3加载数据时出错: {str(e)}")
         return None
