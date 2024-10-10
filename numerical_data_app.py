@@ -482,7 +482,7 @@ def main():
 
     # 添加刷新按钮
     if st.button("刷新数据"):
-        st.experimental_rerun()
+        st.rerun()
 
     # 加载最新数据
     df = load_data(conn)
