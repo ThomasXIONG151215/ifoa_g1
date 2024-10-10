@@ -33,6 +33,7 @@ moonshot_llm = Moonshot(model="moonshot-v1-128k",
                         api_key="sk-wQJ6rfZixFKs8eKyPmAzXBfS1qdObnPbCIEoMyr6nq3i4IMd")
 
 # Data loading functions
+@st.cache_data(ttl=60) 
 def load_data(conn):
     try:
         return conn.read("integral_data2.csv", input_format="csv", ttl=600)
@@ -455,75 +456,49 @@ conn = st.connection('s3', type=FilesConnection)
 
 
 
-@st.cache_resource
-def init_background_task():
-    def update_data():
-        while True:
-            st.session_state.df = load_data(conn)
-            time.sleep(60)
-    
-    thread = threading.Thread(target=update_data, daemon=True)
-    thread.start()
-    return thread
-
-import streamlit as st
-import time
-from threading import Thread
-
-# 全局变量来存储最新数据
-latest_data = None
-
-def update_data_in_background():
-    global latest_data
-    while True:
-        # 更新数据但不直接与 Streamlit 交互
-        new_data = load_data(conn)
-        if new_data is not None:
-            latest_data = new_data
-        time.sleep(60)  # 每60秒更新一次
-
-# 在主 Streamlit 应用之外启动后台线程
-background_thread = Thread(target=update_data_in_background, daemon=True)
-background_thread.start()
-
 def main():
-    st.set_page_config(page_title='室墨司源', layout='wide')
     st.title("司源中控平台")
     
     conn = st.connection('s3', type=FilesConnection)
+    
+    # 加载设置
     settings = load_settings(conn)
-
     if settings is None:
         st.error("加载设置失败。请检查您的S3配置。")
         return
 
+    # 创建标签页
     tab0, tab1, tab2, tab3 = st.tabs(["综合概览", "设置编辑器", "数据查看器", "AI助手团"])
 
+    # 在每个标签页中使用相同的数据加载函数
     with tab0:
-        placeholder = st.empty()
-        
+        df = load_data(conn)  # 这里会每60秒自动刷新
+        if df is not None:
+            overview_tab(df)
+        else:
+            st.warning("数据加载中...")
+
     with tab1:
         settings_editor(conn, settings)
 
     with tab2:
-        data_viewer(latest_data)
+        df = load_data(conn)  # 再次调用,但会使用缓存
+        if df is not None:
+            data_viewer(df)
+        else:
+            st.warning("数据加载中...")
 
     with tab3:
-        ai_assistants(latest_data)
+        df = load_data(conn)  # 再次调用,但会使用缓存
+        if df is not None:
+            ai_assistants(df)
+        else:
+            st.warning("数据加载中...")
 
-    # 使用 st.empty() 来更新综合概览
-    def update_overview():
-        while True:
-            with placeholder.container():
-                if latest_data is not None:
-                    overview_tab(latest_data)
-                else:
-                    st.warning("数据正在加载中...")
-            time.sleep(60)  # 每60秒更新一次
-
-    # 在 Streamlit 应用内启动更新循环
-    import threading
-    threading.Thread(target=update_overview, daemon=True).start()
+    # 添加一个刷新按钮,用于手动刷新数据
+    if st.button("手动刷新数据"):
+        st.cache_data.clear()
+        st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
