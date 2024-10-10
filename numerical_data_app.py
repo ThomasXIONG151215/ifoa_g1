@@ -35,21 +35,21 @@ moonshot_llm = Moonshot(model="moonshot-v1-128k",
 # Data loading functions
 def load_data(conn):
     try:
-        return conn.read("ifoag1/integral_data2.csv", input_format="csv", ttl=600)
+        return conn.read("integral_data2.csv", input_format="csv", ttl=600)
     except Exception as e:
         st.error(f"从S3加载数据时出错: {str(e)}")
         return None
 
 def load_settings(conn):
     try:
-        return conn.read("ifoag1/settings.json", input_format="json", ttl=600)
+        return conn.read("settings.json", input_format="json", ttl=600)
     except Exception as e:
         st.error(f"从S3加载设置时出错: {str(e)}")
         return None
 
 def save_settings(conn, settings):
     try:
-        conn.write("ifoag1/settings.json", json.dumps(settings, indent=2))
+        conn.write("settings.json", json.dumps(settings, indent=2))
         st.success("设置更新成功!")
     except Exception as e:
         st.error(f"更新设置失败: {str(e)}")
