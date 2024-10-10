@@ -166,6 +166,7 @@ def data_viewer(df):
         upper_bound = Q3 + 1.5 * IQR
         return series[(series >= lower_bound) & (series <= upper_bound)]
 
+
     # 按类型分组列
     column_groups = {
         '温度': ['Temperature', 'Temperature1', 'Temperature2', 'Temperature3','TempA','TempB','TempC','WTEMP'],
@@ -208,7 +209,16 @@ def data_viewer(df):
 
     # 添加摘要统计表
     st.subheader("摘要统计")
-    summary_df = filtered_df[list(sum(column_groups.values(), []))].describe()
+    numeric_columns = df.select_dtypes(include=[np.number]).columns
+    
+    # 创建一个新的DataFrame来存储清理后的摘要统计
+    summary_df = pd.DataFrame()
+    
+    for column in numeric_columns:
+        clean_series = clean_data(df[column])
+        if not clean_series.empty:
+            summary_df[column] = clean_series.describe()
+    
     st.dataframe(summary_df)
 
     # 添加数据下载按钮
