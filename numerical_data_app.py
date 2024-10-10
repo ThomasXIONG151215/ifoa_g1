@@ -466,46 +466,64 @@ def init_background_task():
     thread.start()
     return thread
 
+import streamlit as st
+import time
+from threading import Thread
 
+# 全局变量来存储最新数据
+latest_data = None
+
+def update_data_in_background():
+    global latest_data
+    while True:
+        # 更新数据但不直接与 Streamlit 交互
+        new_data = load_data(conn)
+        if new_data is not None:
+            latest_data = new_data
+        time.sleep(60)  # 每60秒更新一次
+
+# 在主 Streamlit 应用之外启动后台线程
+background_thread = Thread(target=update_data_in_background, daemon=True)
+background_thread.start()
 
 def main():
-    #st.set_page_config(page_title='室墨司源', layout='wide')
+    st.set_page_config(page_title='室墨司源', layout='wide')
     st.title("司源中控平台")
-    #st.sidebar.image("logo.svg", use_column_width=True)
     
-    
-    init_background_task()
-    
-    df = st.session_state.get('df')
-    st.write(df)
+    conn = st.connection('s3', type=FilesConnection)
     settings = load_settings(conn)
 
     if settings is None:
         st.error("加载设置失败。请检查您的S3配置。")
         return
 
-    tab0,  tab2, tab3,  = st.tabs(["综合概览", "数据查看器", "AI助手团", #"图片查看器"
-                              ])
-    #tab4 
-                   
+    tab0, tab1, tab2, tab3 = st.tabs(["综合概览", "设置编辑器", "数据查看器", "AI助手团"])
 
     with tab0:
-        if df is not None:            
-            overview_tab(df)
-        else:
-            st.info("数据正在加载中...")
-
-    #with tab1:
-    #    settings_editor(conn, settings)
+        placeholder = st.empty()
+        
+    with tab1:
+        settings_editor(conn, settings)
 
     with tab2:
-        data_viewer(df)
+        data_viewer(latest_data)
 
     with tab3:
-        ai_assistants(df)
+        ai_assistants(latest_data)
 
-    #with tab4:
-    #    image_viewer()
+    # 使用 st.empty() 来更新综合概览
+    def update_overview():
+        while True:
+            with placeholder.container():
+                if latest_data is not None:
+                    overview_tab(latest_data)
+                else:
+                    st.warning("数据正在加载中...")
+            time.sleep(60)  # 每60秒更新一次
+
+    # 在 Streamlit 应用内启动更新循环
+    import threading
+    threading.Thread(target=update_overview, daemon=True).start()
 
 if __name__ == "__main__":
     main()
