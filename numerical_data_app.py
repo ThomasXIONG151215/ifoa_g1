@@ -475,8 +475,9 @@ def main():
     
     
     init_background_task()
-    df = st.session_state.get('df')
     
+    df = st.session_state.get('df')
+    st.write(df)
     settings = load_settings(conn)
 
     if settings is None:
