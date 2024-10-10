@@ -455,7 +455,6 @@ import threading
 conn = st.connection('s3', type=FilesConnection)
 
 
-
 def main():
     st.title("司源中控平台")
     
@@ -470,35 +469,32 @@ def main():
     # 创建标签页
     tab0, tab1, tab2, tab3 = st.tabs(["综合概览", "设置编辑器", "数据查看器", "AI助手团"])
 
-    # 在每个标签页中使用相同的数据加载函数
-    with tab0:
-        df = load_data(conn)  # 这里会每60秒自动刷新
-        if df is not None:
-            overview_tab(df)
-        else:
-            st.warning("数据加载中...")
-
-    with tab1:
-        settings_editor(conn, settings)
-
-    with tab2:
-        df = load_data(conn)  # 再次调用,但会使用缓存
-        if df is not None:
-            data_viewer(df)
-        else:
-            st.warning("数据加载中...")
-
-    with tab3:
-        df = load_data(conn)  # 再次调用,但会使用缓存
-        if df is not None:
-            ai_assistants(df)
-        else:
-            st.warning("数据加载中...")
-
-    # 添加一个刷新按钮,用于手动刷新数据
-    if st.button("手动刷新数据"):
-        st.cache_data.clear()
+    # 添加刷新按钮
+    if st.button("刷新数据"):
         st.experimental_rerun()
+
+    # 加载最新数据
+    df = load_data(conn)
+
+    if df is not None:
+        with tab0:
+            overview_tab(df)
+
+        with tab1:
+            settings_editor(conn, settings)
+
+        with tab2:
+            data_viewer(df)
+
+        with tab3:
+            ai_assistants(df)
+    else:
+        st.warning("数据加载失败，请检查网络连接或S3配置。")
+
+    # 添加自动刷新功能
+    st.write("页面将每5分钟自动刷新一次")
+    time.sleep(300)  # 等待5分钟
+    st.experimental_rerun()  # 重新运行整个应用
 
 if __name__ == "__main__":
     main()
