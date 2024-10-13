@@ -259,6 +259,8 @@ def extract_date_from_filename(filename):
 
 def ai_assistants(df):
     agent_data_analyst = create_pandas_dataframe_agent(langchain_llm, df, verbose=True, allow_dangerous_code=True)
+    data_analysis(agent_data_analyst)
+    """ 
     with st.container(height=700):
         iframe_html = """
         <iframe src="https://udify.app/chatbot/QLSY0P3UgKlOifoO" 
@@ -268,6 +270,8 @@ def ai_assistants(df):
         </iframe>
         """
         components.html(iframe_html, height=700)
+    """
+    
 def get_available_units():
     try:
         response = s3_client.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix="images/", Delimiter='/')
