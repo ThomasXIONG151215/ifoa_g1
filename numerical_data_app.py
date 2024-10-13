@@ -58,7 +58,7 @@ def save_settings(conn, settings):
 
 
 
-@st.cache_data 
+#@st.cache_data 
 def data_analysis(agent_data_analyst):
     questions = [
         "**这里是否缺失数据?**",
