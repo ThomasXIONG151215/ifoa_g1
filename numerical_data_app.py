@@ -258,7 +258,8 @@ def extract_date_from_filename(filename):
     return None
 
 def ai_assistants(df):
-    agent_data_analyst = create_pandas_dataframe_agent(moonshot_llm#langchain_llm, 
+    agent_data_analyst = create_pandas_dataframe_agent(moonshot_llm#langchain_llm
+                                                       , 
                                                        df, verbose=True, allow_dangerous_code=True)
     data_analysis(agent_data_analyst)
     #""" 
