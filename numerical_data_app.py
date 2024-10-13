@@ -263,11 +263,11 @@ def ai_assistants(df):
     """ 
     with st.container(height=700):
         iframe_html = """
-        <iframe src="https://udify.app/chatbot/QLSY0P3UgKlOifoO" 
-                style="width: 100%; height: 700px;" 
-                frameborder="0" 
-                allow="microphone">
-        </iframe>
+        #<iframe src="https://udify.app/chatbot/QLSY0P3UgKlOifoO" 
+        #        style="width: 100%; height: 700px;" 
+        #        frameborder="0" 
+        #        allow="microphone">
+        #</iframe>
         """
         components.html(iframe_html, height=700)
     """
