@@ -296,6 +296,27 @@ def extract_date_from_filename(filename):
         return datetime.strptime(date_str, "%Y-%m-%d_%H-%M-%S")
     return None
 
+
+def calculate_green_area(image_url):
+    # Download the image from the URL
+    resp = requests.get(image_url)
+    image = cv2.imdecode(np.frombuffer(resp.content, np.uint8), cv2.IMREAD_COLOR)
+    
+    # Convert to HSV color space
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    
+    # Define range of green color in HSV
+    lower_green = np.array([35, 50, 50])
+    upper_green = np.array([85, 255, 255])
+    
+    # Create a mask for green color
+    mask = cv2.inRange(hsv, lower_green, upper_green)
+    
+    # Calculate the area of green pixels
+    green_area = np.sum(mask > 0)
+    
+    return green_area
+
 def get_image_list(unit_number):
     try:
         prefix = f"images/{unit_number}/"
@@ -319,6 +340,33 @@ def get_image_list(unit_number):
     except ClientError as e:
         st.error(f"获取图片列表时出错: {str(e)}")
         return []
+
+import matplotlib.pyplot as plt 
+import cv2
+
+def process_images_and_store_data(image_list):
+    data = []
+    for image_key, image_date, image_type in image_list:
+        if image_type == 'original':  # Only process original images
+            image_url = s3_client.generate_presigned_url('get_object',
+                                                         Params={'Bucket': S3_BUCKET_NAME,
+                                                                 'Key': image_key},
+                                                         ExpiresIn=3600)
+            green_area = calculate_green_area(image_url)
+            data.append((image_date, green_area))
+    return data
+
+def process_images_and_store_data(image_list):
+    data = []
+    for image_key, image_date, image_type in image_list:
+        if image_type == 'original':  # Only process original images
+            image_url = s3_client.generate_presigned_url('get_object',
+                                                         Params={'Bucket': S3_BUCKET_NAME,
+                                                                 'Key': image_key},
+                                                         ExpiresIn=3600)
+            green_area = calculate_green_area(image_url)
+            data.append((image_date, green_area))
+    return data
 
 def image_viewer():
     st.header("图片查看器")
@@ -347,6 +395,13 @@ def image_viewer():
         st.warning(f"单元 {unit_number} 没有可用的图片。")
         return
 
+    # Process images and get leaf area data
+    leaf_area_data = process_images_and_store_data(image_list)
+
+    # Plot leaf area over time
+    plot_image = plot_leaf_area_over_time(leaf_area_data)
+    st.image(plot_image, caption='Green Leaf Area Over Time')
+  
     # 获取所有可用的日期
     available_dates = sorted(set(image[1].date() for image in image_list), reverse=True)
 
@@ -403,6 +458,13 @@ def image_viewer():
                 with col2:
                     st.image(image_url)
                     st.write(f"处理后图片: {image_date}")
+            
+            green_area = calculate_green_area(image_url)
+            st.write(f"绿叶面积: {green_area} 像素")
+
+
+                
+  
     else:
         st.warning("未找到匹配的图片。")
       
