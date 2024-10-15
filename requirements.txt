@@ -10,5 +10,5 @@ langchain_experimental
 langchain_core
 tabulate
 boto3
-cv2
+opencv-python
 matplotlib
