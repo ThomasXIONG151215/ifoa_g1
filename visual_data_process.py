@@ -10,7 +10,7 @@ import re
 import numpy as np
 import requests
 import time
-import threading
+#import threading
 import matplotlib.pyplot as plt 
 import cv2
 
