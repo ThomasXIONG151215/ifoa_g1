@@ -16,7 +16,7 @@ import requests
 import time
 import matplotlib.pyplot as plt 
 import cv2
-from data_analyst import data_analysis
+from data_analyst import ai_assistants
 st.set_page_config(page_title='室墨司源', layout='wide')
 
 # AWS and S3 configuration
