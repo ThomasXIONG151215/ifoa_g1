@@ -428,8 +428,8 @@ def image_viewer():
                     st.image(image_url)
                     st.write(f"处理后图片: {image_date}")
             
-            green_area = calculate_green_area(image_url)
-            st.write(f"绿叶面积: {green_area} 像素")
+            #green_area = calculate_green_area(image_url)
+            #st.write(f"绿叶面积: {green_area} 像素")
 
 
                 
