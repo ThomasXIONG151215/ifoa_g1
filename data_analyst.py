@@ -9,7 +9,7 @@ import boto3
 import matplotlib.pyplot as plt 
 import cv2
 
-st.set_page_config(page_title='室墨司源', layout='wide')
+#st.set_page_config(page_title='室墨司源', layout='wide')
 
 # AWS and S3 configuration
 AWS_ACCESS_KEY_ID = st.secrets["AWS_ACCESS_KEY_ID"]
