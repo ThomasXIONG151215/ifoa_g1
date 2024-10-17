@@ -52,179 +52,6 @@ def save_settings(conn, settings):
 
 
 
-#@st.cache_data 
-def data_analysis(agent_data_analyst):
-    questions = [
-        "**这里是否缺失数据?**",
-        "**请对当前种植情况做一个整体评价**",
-        "**当前室内温度对作物的影响如何？**",
-        "**当前CO2浓度是否在最优区间内?对植物生长有何影响?**",
-        "**目前的光照强度是否适宜?是否需要调整?**",
-        "**湿度水平如何?是否在植物生长的理想范围内?**",
-        "**基于当前数据,您对未来一周的产量有何预测?**",
-        "**有哪些关键指标需要特别关注或改进?**"
-    ]
-    
-    avatar = ':material/cruelty_free:'
-    combined_info = ""
-    
-    for question in questions:
-        st.write(question)
-        message = st.chat_message(name="ai", avatar=avatar)
-        answer = agent_data_analyst.run("请用中文回答: " + question)
-        message.write(answer)
-        combined_info += question + "\n" + answer + "\n\n"
-    
-    # 生成总结报告
-    summary_prompt = "基于以下分析结果,请生成一个简洁的总结报告,突出关键发现和建议:\n\n" + combined_info
-    summary = agent_data_analyst.run(summary_prompt)
-    
-    st.write("**总结报告**")
-    message = st.chat_message(name="ai", avatar=':material/file-document-outline:')
-    message.write(summary)
-    
-    return combined_info, summary
-
-def settings_editor(conn, settings):
-    new_settings = settings.copy()
-    
-    st.header("设置编辑器")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # 光照设置
-        st.subheader("光照")
-        new_settings['lighting']['on_time'] = st.time_input("开灯时间", datetime.strptime(settings['lighting'].get('on_time', '06:00'), "%H:%M").time())
-        new_settings['lighting']['off_time'] = st.time_input("关灯时间", datetime.strptime(settings['lighting'].get('off_time', '22:00'), "%H:%M").time())
-        
-        for i in range(4):
-            new_settings['lighting'][f'led_intensity_{i+1}'] = st.slider(f"LED灯排 {i+1} 强度 (%)", 0, 100, settings['lighting'].get(f'led_intensity_{i+1}', 50))
-
-        # 策略
-        st.subheader("策略")
-        new_settings['strategy'] = st.selectbox("控制策略", ["经典内循环", "新风外循环", "混合双循环"], index=["经典内循环", "新风外循环", "混合双循环"].index(settings['strategy']))
-
-    with col2:
-        # 环境设置
-        st.subheader("环境")
-        for period in ['light_period', 'dark_period']:
-            st.write("光照期" if period == 'light_period' else "黑暗期")
-            new_settings['environment'][period]['temperature_celsius'] = st.slider(f"温度 (°C) - {'光照期' if period == 'light_period' else '黑暗期'}", 0, 40, settings['environment'][period]['temperature_celsius'])
-            new_settings['environment'][period]['humidity_percentage'] = st.slider(f"湿度 (%) - {'光照期' if period == 'light_period' else '黑暗期'}", 0, 100, settings['environment'][period]['humidity_percentage'])
-            new_settings['environment'][period]['co2_ppm'] = st.slider(f"CO2 (ppm) - {'光照期' if period == 'light_period' else '黑暗期'}", 0, 2000, settings['environment'][period]['co2_ppm'])
-
-        # 灌溉设置
-        st.subheader("灌溉")
-        new_settings['irrigation']['frequency_hours'] = st.number_input("灌溉频率 (小时)", 0.1, 24.0, float(settings['irrigation']['frequency_hours']), 0.1)
-        new_settings['irrigation']['duration_minutes'] = st.number_input("灌溉时长 (分钟)", 1, 60, int(settings['irrigation']['duration_minutes']), 1)
-
-        # 营养液设置
-        st.subheader("营养液")
-        new_settings['nutrient_solution']['ec_ms_cm'] = st.number_input("电导率 EC (mS/cm)", 0.1, 5.0, float(settings['nutrient_solution']['ec_ms_cm']), 0.1)
-        new_settings['nutrient_solution']['ph'] = st.number_input("pH值", 0.0, 14.0, float(settings['nutrient_solution']['ph']), 0.1)
-
-    # 更新设置
-    if st.button("更新设置"):
-        save_settings(conn, new_settings)
-        
-
-def data_viewer(df):
-    st.header("数据查看器")
-    
-    if df is None or df.empty:
-        st.warning("没有可用的数据进行可视化。")
-        return
-
-    # 将DateTime列转换为datetime类型
-    df['DateTime'] = pd.to_datetime(df['DateTime_y'])
-
-    # 时间范围选择器
-    date_range = st.date_input(
-        "选择日期范围",
-        [df['DateTime'].min().date(), df['DateTime'].max().date()]
-    )
-    start_date, end_date = date_range
-    mask = (df['DateTime'].dt.date >= start_date) & (df['DateTime'].dt.date <= end_date)
-    filtered_df = df.loc[mask]
-
-    # 数据清理函数
-    def clean_data(series):
-        # 移除-1值
-        series = series[series != -1]
-        
-        # 移除异常值（使用IQR方法）
-        Q1 = series.quantile(0.25)
-        Q3 = series.quantile(0.75)
-        IQR = Q3 - Q1
-        lower_bound = Q1 - 1.5 * IQR
-        upper_bound = Q3 + 1.5 * IQR
-        return series[(series >= lower_bound) & (series <= upper_bound)]
-
-
-    # 按类型分组列
-    column_groups = {
-        '温度': ['Temperature', 'Temperature1', 'Temperature2', 'Temperature3','TempA','TempB','TempC','WTEMP'],
-        '湿度': ['Humidity', 'Humidity1', 'Humidity2', 'Humidity3', 'HumiA','HumiB','HumiC'],
-        'CO2': ['CO2PPM','CO2PPM1','CO2PPM2','CO2PPM3','CO2PPMA','CO2PPMB','CO2PPMC'],
-        '水质': ['pH', 'EC'],  # 添加EC
-        '水位': ['Wlevel']
-    }
-
-    # 为每个组创建图表
-    for group, columns in column_groups.items():
-        fig = go.Figure()
-        valid_data = False
-        for column in columns:
-            if column in filtered_df.columns:
-                # 清理数据
-                clean_series = clean_data(filtered_df[column])
-                if not clean_series.empty:
-                    fig.add_trace(go.Scatter(x=filtered_df.loc[clean_series.index, 'DateTime'], 
-                                             y=clean_series, 
-                                             mode='lines', 
-                                             name=column))
-                    valid_data = True
-        
-        if valid_data:
-            y_max = max([trace.y.max() for trace in fig.data])
-            y_min = min([trace.y.min() for trace in fig.data])
-            fig.update_layout(
-                title=f'{group}数据',
-                xaxis_title='日期时间',
-                yaxis_title='数值',
-                yaxis=dict(range=[max(0, y_min * 0.9), y_max * 1.1]),  # 调整y轴范围，确保不会出现负值
-                legend_title='传感器',
-                height=600,
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning(f"没有找到 {group} 的有效数据。")
-
-    # 添加摘要统计表
-    st.subheader("摘要统计")
-    numeric_columns = df.select_dtypes(include=[np.number]).columns
-    
-    # 创建一个新的DataFrame来存储清理后的摘要统计
-    summary_df = pd.DataFrame()
-    
-    for column in numeric_columns:
-        clean_series = clean_data(df[column])
-        if not clean_series.empty:
-            summary_df[column] = clean_series.describe()
-    
-    st.dataframe(summary_df)
-
-    # 添加数据下载按钮
-    csv = filtered_df.to_csv(index=False)
-    #st.download_button(
-    #    label="下载CSV数据",
-    #    data=csv,
-    #    file_name="plant_factory_data.csv",
-    #    mime="text/csv",
-    #)
-
 def get_available_units():
     try:
         response = s3_client.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix="images/", Delimiter='/')
@@ -306,18 +133,6 @@ def process_images_and_store_data(image_list):
             data.append((image_date, green_area))
     return data
 
-def process_images_and_store_data(image_list):
-    data = []
-    for image_key, image_date, image_type in image_list:
-        if image_type == 'original':  # Only process original images
-            image_url = s3_client.generate_presigned_url('get_object',
-                                                         Params={'Bucket': S3_BUCKET_NAME,
-                                                                 'Key': image_key},
-                                                         ExpiresIn=3600)
-            green_area = calculate_green_area(image_url)
-            data.append((image_date, green_area))
-    return data
-
 import io
 def plot_leaf_area_over_time(data):
     dates = [d[0] for d in data]
@@ -365,11 +180,11 @@ def image_viewer():
         return
 
     # Process images and get leaf area data
-    leaf_area_data = process_images_and_store_data(image_list)
+    #leaf_area_data = process_images_and_store_data(image_list)
 
     # Plot leaf area over time
-    plot_image = plot_leaf_area_over_time(leaf_area_data)
-    st.image(plot_image, caption='Green Leaf Area Over Time')
+    #plot_image = plot_leaf_area_over_time(leaf_area_data)
+    #st.image(plot_image, caption='Green Leaf Area Over Time')
   
     # 获取所有可用的日期
     available_dates = sorted(set(image[1].date() for image in image_list), reverse=True)
@@ -428,8 +243,8 @@ def image_viewer():
                     st.image(image_url)
                     st.write(f"处理后图片: {image_date}")
             
-            #green_area = calculate_green_area(image_url)
-            #st.write(f"绿叶面积: {green_area} 像素")
+            green_area = calculate_green_area(image_url)
+            st.write(f"绿叶面积: {green_area} 像素")
 
 
                 
