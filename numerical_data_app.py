@@ -12,6 +12,12 @@ from langchain_community.llms import Tongyi
 from langchain_community.llms.moonshot import Moonshot
 from langchain_experimental.agents import create_pandas_dataframe_agent
 import numpy as np
+import requests
+import time
+import threading
+import matplotlib.pyplot as plt 
+import cv2
+
 st.set_page_config(page_title='室墨司源', layout='wide')
 
 # AWS and S3 configuration
@@ -341,8 +347,7 @@ def get_image_list(unit_number):
         st.error(f"获取图片列表时出错: {str(e)}")
         return []
 
-import matplotlib.pyplot as plt 
-import cv2
+
 
 def process_images_and_store_data(image_list):
     data = []
@@ -526,8 +531,7 @@ def overview_tab(df):
 
 
 
-import time
-import threading
+
 
 
 
