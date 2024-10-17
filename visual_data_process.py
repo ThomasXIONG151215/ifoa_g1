@@ -6,11 +6,7 @@ from datetime import datetime
 import boto3
 from botocore.exceptions import ClientError
 import re
-from st_files_connection import FilesConnection
-import streamlit.components.v1 as components
-from langchain_community.llms import Tongyi
-from langchain_community.llms.moonshot import Moonshot
-from langchain_experimental.agents import create_pandas_dataframe_agent
+
 import numpy as np
 import requests
 import time
@@ -31,15 +27,7 @@ s3_client = boto3.client('s3',
                          aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
                          region_name=AWS_DEFAULT_REGION)
 
-# LLM configuration
-langchain_llm = Tongyi(temperature=0,
-                       api_key="sk-a36dbf13c32f4b28a7dfc3ba81275fa8",
-                       base_url="https://dashscope.aliyuncs.com/compatible-mode/v1")
 
-moonshot_llm = Moonshot(model="moonshot-v1-128k",
-                        api_key="sk-wQJ6rfZixFKs8eKyPmAzXBfS1qdObnPbCIEoMyr6nq3i4IMd")
-
-# Data loading functions
 
 def load_data(conn):
     try:

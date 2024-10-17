@@ -11,4 +11,5 @@ langchain_core
 tabulate
 boto3
 opencv-python-headless
+opencv-contrib-python-headless
 matplotlib
