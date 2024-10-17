@@ -237,26 +237,6 @@ def data_viewer(df):
     #    mime="text/csv",
     #)
 
-
-
-
-def ai_assistants(df):
-    agent_data_analyst = create_pandas_dataframe_agent(moonshot_llm#langchain_llm
-                                                       , 
-                                                       df, verbose=True, allow_dangerous_code=True)
-    data_analysis(agent_data_analyst)
-    #""" 
-    #with st.container(height=700):
-    #    iframe_html = """
-        #<iframe src="https://udify.app/chatbot/QLSY0P3UgKlOifoO" 
-        #        style="width: 100%; height: 700px;" 
-        #        frameborder="0" 
-        #        allow="microphone">
-        #</iframe>
-    #    """
-    #    components.html(iframe_html, height=700)
-    #"""
-    
 def get_available_units():
     try:
         response = s3_client.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix="images/", Delimiter='/')
@@ -279,115 +259,192 @@ def extract_date_from_filename(filename):
         return datetime.strptime(date_str, "%Y-%m-%d_%H-%M-%S")
     return None
 
-from visual_data_process import image_viewer
-      
-def overview_tab(df):
-    st.header("综合概览")
 
-    col1, col2 = st.columns([7, 3])
+def calculate_green_area(image_url):
+    # Download the image from the URL
+    resp = requests.get(image_url)
+    image = cv2.imdecode(np.frombuffer(resp.content, np.uint8), cv2.IMREAD_COLOR)
+    
+    # Convert to HSV color space
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    
+    # Define range of green color in HSV
+    lower_green = np.array([35, 50, 50])
+    upper_green = np.array([85, 255, 255])
+    
+    # Create a mask for green color
+    mask = cv2.inRange(hsv, lower_green, upper_green)
+    
+    # Calculate the area of green pixels
+    green_area = np.sum(mask > 0)
+    
+    return green_area
 
-    with col1:
-        image_viewer()
-
-    with col2:
-        st.subheader("最新环境数据")
+def get_image_list(unit_number):
+    try:
+        prefix = f"images/{unit_number}/"
+        paginator = s3_client.get_paginator('list_objects_v2')
+        pages = paginator.paginate(Bucket=S3_BUCKET_NAME, Prefix=prefix)
         
-        if df is not None and not df.empty:
-            latest_data = df.iloc[-1]
-            previous_data = df.iloc[-2] if len(df) > 1 else latest_data
-
-            # 温度
-            temperature_diff = latest_data['Temperature'] - previous_data['Temperature']
-            st.metric(label="温度 (°C)", 
-                      value=f"{latest_data['Temperature']:.1f}",
-                      delta=f"{temperature_diff:.1f}")
-
-            # 湿度
-            humidity_diff = latest_data['Humidity'] - previous_data['Humidity']
-            st.metric(label="湿度 (%)", 
-                      value=f"{latest_data['Humidity']:.1f}",
-                      delta=f"{humidity_diff:.1f}")
-
-            # CO2 (如果有的话)
-            if 'CO2PPM' in df.columns:
-                co2_diff = latest_data['CO2PPM'] - previous_data['CO2PPM']
-                st.metric(label="CO2 (ppm)", 
-                          value=f"{latest_data['CO2PPM']:.0f}",
-                          delta=f"{co2_diff:.0f}")
-
-            # pH值
-            if 'pH' in df.columns:
-                ph_diff = latest_data['pH'] - previous_data['pH']
-                ph_value = latest_data['pH']
-                st.metric(label="pH值", 
-                          value=f"{ph_value:.2f}",
-                          delta=f"{ph_diff:.2f}")
-                
-                # pH警告
-                if ph_value < 5 or ph_value > 7:
-                    st.warning(f"警告：pH值 ({ph_value:.2f}) 超出正常范围 (5-7)!")
-
-            # EC值
-            if 'EC' in df.columns:
-                ec_diff = latest_data['EC'] - previous_data['EC']
-                st.metric(label="EC值 (mS/cm)", 
-                          value=f"{latest_data['EC']:.2f}",
-                          delta=f"{ec_diff:.2f}")
-
-        else:
-            st.warning("无法加载最新的环境数据。")
+        image_list = []
+        for page in pages:
+            for item in page.get('Contents', []):
+                key = item['Key']
+                if key.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    filename = key.split('/')[-1]
+                    if filename.startswith('img') or filename.startswith('img_dst'):
+                        date = extract_date_from_filename(key)
+                        if date:
+                            image_type = 'original' if filename.startswith('img') and not filename.startswith('img_dst') else 'processed'
+                            image_list.append((key, date, image_type))
+        
+        # 根据日期时间排序，最新的在前
+        return sorted(image_list, key=lambda x: x[1], reverse=True)
+    except ClientError as e:
+        st.error(f"获取图片列表时出错: {str(e)}")
+        return []
 
 
 
+def process_images_and_store_data(image_list):
+    data = []
+    for image_key, image_date, image_type in image_list:
+        if image_type == 'original':  # Only process original images
+            image_url = s3_client.generate_presigned_url('get_object',
+                                                         Params={'Bucket': S3_BUCKET_NAME,
+                                                                 'Key': image_key},
+                                                         ExpiresIn=3600)
+            green_area = calculate_green_area(image_url)
+            data.append((image_date, green_area))
+    return data
 
+def process_images_and_store_data(image_list):
+    data = []
+    for image_key, image_date, image_type in image_list:
+        if image_type == 'original':  # Only process original images
+            image_url = s3_client.generate_presigned_url('get_object',
+                                                         Params={'Bucket': S3_BUCKET_NAME,
+                                                                 'Key': image_key},
+                                                         ExpiresIn=3600)
+            green_area = calculate_green_area(image_url)
+            data.append((image_date, green_area))
+    return data
 
-
-
-#conn = st.connection('s3', type=FilesConnection)
-
-
-def main():
-    st.title("司源中控平台")
+import io
+def plot_leaf_area_over_time(data):
+    dates = [d[0] for d in data]
+    areas = [d[1] for d in data]
     
-    conn = st.connection('s3', type=FilesConnection)
+    plt.figure(figsize=(10, 6))
+    plt.plot(dates, areas, marker='o')
+    plt.title('Green Leaf Area Over Time')
+    plt.xlabel('Date')
+    plt.ylabel('Green Leaf Area (pixels)')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
     
-    # 加载设置
-    settings = load_settings(conn)
-    if settings is None:
-        st.error("加载设置失败。请检查您的S3配置。")
+    # Convert plot to image
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    return buf
+
+def image_viewer():
+    st.header("图片查看器")
+
+    available_units = get_available_units()
+
+    if not available_units:
+        st.warning("没有找到任何图片单元。")
         return
 
-    # 创建标签页
-    tab0, tab2, tab3 = st.tabs(["综合概览", "数据查看器", "AI助手团"])
+    # 使用会话状态来记住选择的单元，但确保它仍然有效
+    if 'selected_unit' not in st.session_state or st.session_state.selected_unit not in available_units:
+        st.session_state.selected_unit = available_units[0]
 
-    # 添加刷新按钮
-    if st.button("刷新数据"):
-        st.rerun()
+    unit_number = st.selectbox("选择单元编号", available_units, key='unit_selector', index=available_units.index(st.session_state.selected_unit))
+    
+    # 如果单元改变，重置日期和时间选择
+    if unit_number != st.session_state.selected_unit:
+        st.session_state.selected_unit = unit_number
+        st.session_state.pop('selected_date', None)
+        st.session_state.pop('selected_time', None)
 
-    # 加载最新数据
-    df = load_data(conn)
+    image_list = get_image_list(unit_number)
 
-    if df is not None:
-        with tab0:
-            overview_tab(df)
+    if not image_list:
+        st.warning(f"单元 {unit_number} 没有可用的图片。")
+        return
 
-        #with tab1:
-        #    settings_editor(conn, settings)
+    # Process images and get leaf area data
+    leaf_area_data = process_images_and_store_data(image_list)
 
-        with tab2:
-            data_viewer(df)
+    # Plot leaf area over time
+    plot_image = plot_leaf_area_over_time(leaf_area_data)
+    st.image(plot_image, caption='Green Leaf Area Over Time')
+  
+    # 获取所有可用的日期
+    available_dates = sorted(set(image[1].date() for image in image_list), reverse=True)
 
-        with tab3:
-            ai_assistants(df)
+    # 使用会话状态来记住选择的日期，但确保它仍然有效
+    if 'selected_date' not in st.session_state or st.session_state.selected_date not in available_dates:
+        st.session_state.selected_date = available_dates[0]
+
+    # 日期选择器
+    selected_date = st.date_input("选择日期", value=st.session_state.selected_date, key='date_selector')
+    
+    # 如果日期改变，重置时间选择
+    if selected_date != st.session_state.selected_date:
+        st.session_state.selected_date = selected_date
+        st.session_state.pop('selected_time', None)
+
+    # 筛选选定日期的图片
+    filtered_images = [img for img in image_list if img[1].date() == selected_date]
+
+    if not filtered_images:
+        st.warning(f"在 {selected_date} 没有可用的图片。")
+        return
+
+    # 获取选定日期的所有可用时间
+    available_times = sorted(set(image[1].time() for image in filtered_images), reverse=True)
+
+    # 使用会话状态来记住选择的时间，但确保它仍然有效
+    if 'selected_time' not in st.session_state or st.session_state.selected_time not in available_times:
+        st.session_state.selected_time = available_times[0]
+
+    # 时间选择器
+    selected_time = st.selectbox("选择时间", 
+                                 options=available_times,
+                                 format_func=lambda x: x.strftime("%H:%M:%S"),
+                                 key='time_selector', 
+                                 index=available_times.index(st.session_state.selected_time))
+    st.session_state.selected_time = selected_time
+
+    # 找到匹配的图片
+    matching_images = [img for img in filtered_images if img[1].time() == selected_time]
+
+    if matching_images:
+        col1, col2 = st.columns(2)
+        for img in matching_images:
+            image_key, image_date, image_type = img
+            image_url = s3_client.generate_presigned_url('get_object',
+                                                         Params={'Bucket': S3_BUCKET_NAME,
+                                                                 'Key': image_key},
+                                                         ExpiresIn=3600)
+            if image_type == 'original':
+                with col1:
+                    st.image(image_url)
+                    st.write(f"原始图片: {image_date}")
+            else:
+                with col2:
+                    st.image(image_url)
+                    st.write(f"处理后图片: {image_date}")
+            
+            green_area = calculate_green_area(image_url)
+            st.write(f"绿叶面积: {green_area} 像素")
+
+
+                
+  
     else:
-        st.warning("数据加载失败，请检查网络连接或S3配置。")
-
-    # 添加自动刷新功能
-    st.write("页面将每5分钟自动刷新一次")
-    time.sleep(300)  # 等待5分钟
-    st.rerun()  # 重新运行整个应用
-
-if __name__ == "__main__":
-    main()
-
-
+        st.warning("未找到匹配的图片。")
