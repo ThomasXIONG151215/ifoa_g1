@@ -104,7 +104,8 @@ def settings_editor(conn, settings):
     # 更新设置
     if st.button("更新设置"):
         save_settings(conn, new_settings)
-        
+
+
 
 def data_viewer(df):
     st.header("数据查看器")
@@ -113,10 +114,8 @@ def data_viewer(df):
         st.warning("没有可用的数据进行可视化。")
         return
 
-    # 将DateTime列转换为datetime类型
     df['DateTime'] = pd.to_datetime(df['DateTime_y'])
-
-    # 时间范围选择器
+    
     date_range = st.date_input(
         "选择日期范围",
         [df['DateTime'].min().date(), df['DateTime'].max().date()]
@@ -125,12 +124,8 @@ def data_viewer(df):
     mask = (df['DateTime'].dt.date >= start_date) & (df['DateTime'].dt.date <= end_date)
     filtered_df = df.loc[mask]
 
-    # 数据清理函数
     def clean_data(series):
-        # 移除-1值
         series = series[series != -1]
-        
-        # 移除异常值（使用IQR方法）
         Q1 = series.quantile(0.25)
         Q3 = series.quantile(0.75)
         IQR = Q3 - Q1
@@ -138,47 +133,54 @@ def data_viewer(df):
         upper_bound = Q3 + 1.5 * IQR
         return series[(series >= lower_bound) & (series <= upper_bound)]
 
-
-    # 按类型分组列
     column_groups = {
         '温度': ['Temperature', 'Temperature1', 'Temperature2', 'Temperature3','TempA','TempB','TempC','WTEMP'],
         '湿度': ['Humidity', 'Humidity1', 'Humidity2', 'Humidity3', 'HumiA','HumiB','HumiC'],
         'CO2': ['CO2PPM','CO2PPM1','CO2PPM2','CO2PPM3','CO2PPMA','CO2PPMB','CO2PPMC'],
-        'EC': ['EC'],  # 添加EC
+        'EC': ['EC'],
         'pH': ['pH'],
         '水位': ['Wlevel']
     }
 
-    # 为每个组创建图表
     for group, columns in column_groups.items():
-        fig = go.Figure()
-        valid_data = False
-        for column in columns:
-            if column in filtered_df.columns:
-                # 清理数据
+        st.subheader(f'{group}数据')
+        
+        # 找出第一个有效的列
+        valid_columns = [col for col in columns if col in filtered_df.columns]
+        if not valid_columns:
+            st.warning(f"没有找到 {group} 的有效数据。")
+            continue
+        
+        # 创建多选框，默认选中第一个有效列
+        selected_columns = st.multiselect(
+            f"选择要显示的 {group} 数据列",
+            options=valid_columns,
+            default=[valid_columns[0]]
+        )
+
+        if selected_columns:
+            fig = go.Figure()
+            for column in selected_columns:
                 clean_series = clean_data(filtered_df[column])
                 if not clean_series.empty:
                     fig.add_trace(go.Scatter(x=filtered_df.loc[clean_series.index, 'DateTime'], 
                                              y=clean_series, 
                                              mode='lines', 
                                              name=column))
-                    valid_data = True
-        
-        if valid_data:
+
             y_max = max([trace.y.max() for trace in fig.data])
             y_min = min([trace.y.min() for trace in fig.data])
             fig.update_layout(
-                title=f'{group}数据',
                 xaxis_title='日期时间',
                 yaxis_title='数值',
-                yaxis=dict(range=[max(0, y_min * 0.9), y_max * 1.1]),  # 调整y轴范围，确保不会出现负值
+                yaxis=dict(range=[max(0, y_min * 0.9), y_max * 1.1]),
                 legend_title='传感器',
                 height=600,
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
             st.plotly_chart(fig, use_container_width=True)
         else:
-            st.warning(f"没有找到 {group} 的有效数据。")
+            st.warning(f"请选择至少一个 {group} 数据列进行显示。")
 
     # 添加摘要统计表
     st.subheader("摘要统计")
