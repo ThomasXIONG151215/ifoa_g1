@@ -82,6 +82,7 @@ def data_analysis(agent_data_analyst):
         2. 直接给出结论,不需要详细解释过程。
         3. 回答应简明扼要,不超过3句话。
         4. 如果可能,请提供一个简短的建议或见解。
+        5. You must always return valid JSON fenced by a markdown code block. Do not return any additional text
         
         请确保您的回答简洁、直接,并聚焦于最重要的信息。
         """)
@@ -95,6 +96,7 @@ def data_analysis(agent_data_analyst):
       1. 总结报告应包含3-5个最重要的发现。
       2. 每个发现用一句话概括。
       3. 最后提供1-2个整体建议。
+      4. You must always return valid JSON fenced by a markdown code block. Do not return any additional text
       
       请确保总结报告简洁明了,突出关键信息。
       
