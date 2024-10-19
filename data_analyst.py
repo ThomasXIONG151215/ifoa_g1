@@ -56,6 +56,7 @@ def save_settings(conn, settings):
 
 
 #@st.cache_data 
+#@st.cache_data 
 def data_analysis(agent_data_analyst):
     questions = [
         "**这里是否缺失数据?**",
@@ -69,18 +70,40 @@ def data_analysis(agent_data_analyst):
     for question in questions:
         st.write(question)
         message = st.chat_message(name="ai", avatar=avatar)
-        answer = agent_data_analyst.run("请用中文回答: " + question)
+        answer = agent_data_analyst.run(f"""
+请用中文简洁地回答以下问题:
+
+{question}
+
+要求:
+1. 只使用2-3个最关键的数据点来回答问题。
+2. 直接给出结论,不需要详细解释过程。
+3. 回答应简明扼要,不超过3句话。
+4. 如果可能,请提供一个简短的建议或见解。
+
+请确保您的回答简洁、直接,并聚焦于最重要的信息。
+        """)
         message.write(answer)
         combined_info += question + "\n" + answer + "\n\n"
     
     # 生成总结报告
-    summary_prompt = "基于以下分析结果,请生成一个简洁的总结报告,突出关键发现和建议:\n\n" + combined_info
+    summary_prompt = """
+基于以下分析结果,请生成一个简洁的总结报告:
+
+1. 总结报告应包含3-5个最重要的发现。
+2. 每个发现用一句话概括。
+3. 最后提供1-2个整体建议。
+
+请确保总结报告简洁明了,突出关键信息。
+
+分析结果:
+{combined_info}
+    """
     summary = agent_data_analyst.run(summary_prompt)
     
     st.write("**总结报告**")
     message = st.chat_message(name="ai", avatar=':material/cruelty_free:')
     message.write(summary)
-    
     
     return combined_info, summary
 
