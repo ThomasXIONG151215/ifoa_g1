@@ -59,9 +59,11 @@ def save_settings(conn, settings):
 #@st.cache_data 
 def data_analysis(agent_data_analyst):
     questions = [
-        "**这里是否缺失数据?**",
-        "**当前室内温度和湿度稳定性如何？**",
-        "**当前CO2浓度变化规律如何**",
+        "**最近七天除了unnamed开头的列，还有没有否缺失数据，缺失情况如何?**",
+        "**最近七天，室内温度和湿度稳定性如何？**",
+        "**最近七天，CO2浓度变化规律如何**",
+      "**最近七天，pH变化规律如何**",
+      "**最近七天，EC变化规律如何**",
     ]
     
     avatar = ':material/cruelty_free:'
@@ -88,7 +90,7 @@ def data_analysis(agent_data_analyst):
     
     # 生成总结报告
     summary_prompt = """
-      基于以下分析结果,请生成一个简洁的总结报告:
+      基于以下分析结果,请生成一个中文的简洁的总结报告:
       
       1. 总结报告应包含3-5个最重要的发现。
       2. 每个发现用一句话概括。
