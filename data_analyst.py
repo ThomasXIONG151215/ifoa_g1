@@ -78,7 +78,7 @@ def data_analysis(agent_data_analyst):
     summary = agent_data_analyst.run(summary_prompt)
     
     st.write("**总结报告**")
-    message = st.chat_message(name="ai", avatar=':material/file-document-outline:')
+    message = st.chat_message(name="ai", avatar=':material/cruelty_free:')
     message.write(summary)
     
     
