@@ -301,7 +301,7 @@ def main():
         return
 
     # 创建标签页
-    tab0, tab2, tab3 = st.tabs(["综合概览", "数据查看器", "AI助手团"])
+    tab0, tab2, tab3 = st.tabs(["即时反馈面板", "历史数据查看", "生生AI问答"])
 
     # 添加刷新按钮
     if st.button("刷新数据"):
