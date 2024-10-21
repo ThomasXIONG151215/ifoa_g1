@@ -258,8 +258,3 @@ def image_viewer():
     else:
         st.warning("未找到匹配的图片。")
 
-
-                
-  
-    else:
-        st.warning("未找到匹配的图片。")
