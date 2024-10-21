@@ -13,4 +13,3 @@ boto3
 opencv-python-headless
 opencv-contrib-python-headless
 matplotlib
-Pillow
