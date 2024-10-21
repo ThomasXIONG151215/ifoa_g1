@@ -13,7 +13,7 @@ import time
 #import threading
 import matplotlib.pyplot as plt 
 import cv2
-
+from PIL import Image
 #st.set_page_config(page_title='室墨司源', layout='wide')
 
 # AWS and S3 configuration
