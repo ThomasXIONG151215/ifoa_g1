@@ -75,7 +75,44 @@ def extract_date_from_filename(filename):
     return None
 
 
-
+def improve_green_detection(image):
+    # 转换到LAB色彩空间
+    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    
+    # 分离L, A, B通道
+    l, a, b = cv2.split(lab)
+    
+    # 对A通道应用阈值处理，A通道中绿色为负值
+    _, thresh = cv2.threshold(a, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    
+    # 应用形态学操作来去除噪点
+    kernel = np.ones((3,3),np.uint8)
+    opening = cv2.morphologyEx(thresh, cv2.MORPHOLOGY_OPEN, kernel, iterations = 2)
+    
+    # 确定背景区域
+    sure_bg = cv2.dilate(opening, kernel, iterations=3)
+    
+    # 寻找前景区域
+    dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
+    _, sure_fg = cv2.threshold(dist_transform, 0.7*dist_transform.max(), 255, 0)
+    
+    # 寻找未知区域
+    sure_fg = np.uint8(sure_fg)
+    unknown = cv2.subtract(sure_bg, sure_fg)
+    
+    # 标记标签
+    _, markers = cv2.connectedComponents(sure_fg)
+    markers = markers + 1
+    markers[unknown==255] = 0
+    
+    # 应用分水岭算法
+    markers = cv2.watershed(image, markers)
+    
+    # 创建掩码
+    mask = np.zeros(image.shape[:2], dtype="uint8")
+    mask[markers > 1] = 255
+    
+    return mask
 def calculate_green_area_and_contour(image):
     mask = improve_green_detection(image)
     
