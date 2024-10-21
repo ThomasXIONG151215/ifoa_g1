@@ -75,48 +75,6 @@ def extract_date_from_filename(filename):
     return None
 
 
-import cv2
-import numpy as np
-from PIL import Image
-
-def improve_green_detection(image):
-    # 转换到LAB色彩空间
-    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
-    
-    # 分离L, A, B通道
-    l, a, b = cv2.split(lab)
-    
-    # 对A通道应用阈值处理，A通道中绿色为负值
-    _, thresh = cv2.threshold(a, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-    
-    # 应用形态学操作来去除噪点
-    kernel = np.ones((3,3),np.uint8)
-    opening = cv2.morphologyEx(thresh, cv2.MORPHOLOGY_OPEN, kernel, iterations = 2)
-    
-    # 确定背景区域
-    sure_bg = cv2.dilate(opening, kernel, iterations=3)
-    
-    # 寻找前景区域
-    dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
-    _, sure_fg = cv2.threshold(dist_transform, 0.7*dist_transform.max(), 255, 0)
-    
-    # 寻找未知区域
-    sure_fg = np.uint8(sure_fg)
-    unknown = cv2.subtract(sure_bg, sure_fg)
-    
-    # 标记标签
-    _, markers = cv2.connectedComponents(sure_fg)
-    markers = markers + 1
-    markers[unknown==255] = 0
-    
-    # 应用分水岭算法
-    markers = cv2.watershed(image, markers)
-    
-    # 创建掩码
-    mask = np.zeros(image.shape[:2], dtype="uint8")
-    mask[markers > 1] = 255
-    
-    return mask
 
 def calculate_green_area_and_contour(image):
     mask = improve_green_detection(image)
@@ -125,27 +83,42 @@ def calculate_green_area_and_contour(image):
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
     # 过滤小的轮廓
-    min_contour_area = 100  # 可以根据需要调整这个值
+    min_contour_area = 500  # 增加这个值来过滤更多的小轮廓
     filtered_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_contour_area]
+    
+    # 创建一个新的掩码，只包含过滤后的轮廓
+    filtered_mask = np.zeros(mask.shape, dtype=np.uint8)
+    cv2.drawContours(filtered_mask, filtered_contours, -1, 255, -1)
     
     contour_image = image.copy()
     cv2.drawContours(contour_image, filtered_contours, -1, (0, 255, 0), 2)
     
-    green_area = np.sum(mask > 0)
+    # 只计算过滤后的绿色区域面积
+    green_area = np.sum(filtered_mask > 0)
     
-    return green_area, contour_image
+    return green_area, contour_image, filtered_mask
 
 def process_image(image_url):
     response = requests.get(image_url)
     image = cv2.imdecode(np.frombuffer(response.content, np.uint8), cv2.IMREAD_COLOR)
     
-    green_area, contour_image = calculate_green_area_and_contour(image)
+    green_area, contour_image, filtered_mask = calculate_green_area_and_contour(image)
+    
+    # 使用过滤后的掩码来只显示主要的绿色区域
+    result_image = cv2.bitwise_and(image, image, mask=filtered_mask)
+    
+    # 在结果图像上绘制轮廓
+    cv2.drawContours(result_image, cv2.findContours(filtered_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0], -1, (0, 255, 0), 2)
     
     # 转换为PIL Image以便Streamlit显示
-    contour_image_rgb = cv2.cvtColor(contour_image, cv2.COLOR_BGR2RGB)
-    pil_image = Image.fromarray(contour_image_rgb)
+    result_image_rgb = cv2.cvtColor(result_image, cv2.COLOR_BGR2RGB)
+    pil_image = Image.fromarray(result_image_rgb)
     
     return green_area, pil_image
+
+
+
+
 
 def get_image_list(unit_number):
     try:
