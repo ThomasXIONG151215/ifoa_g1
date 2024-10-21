@@ -75,16 +75,27 @@ def extract_date_from_filename(filename):
     return None
 
 
-def calculate_green_area(image):
-
-        # CPU处理
+def calculate_green_area_and_contour(image_url):
+    response = requests.get(image_url)
+    image = cv2.imdecode(np.frombuffer(response.content, np.uint8), -1)
+    
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     lower_green = np.array([35, 40, 40])
     upper_green = np.array([90, 255, 255])
     mask = cv2.inRange(hsv, lower_green, upper_green)
-
+    
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    contour_image = image.copy()
+    cv2.drawContours(contour_image, contours, -1, (0, 255, 0), 2)
+    
     green_area = np.sum(mask > 0)
-    return green_area
+    
+    return green_area, contour_image
+
+def process_image(image_url):
+    green_area, contour_image = calculate_green_area_and_contour(image_url)
+    return green_area, cv2.imencode('.jpg', contour_image)[1].tobytes()
 
 def get_image_list(unit_number):
     try:
@@ -229,13 +240,16 @@ def image_viewer():
                 with col1:
                     st.image(image_url)
                     st.write(f"原始图片: {image_date}")
-            else:
+                
+                green_area, processed_image = process_image(image_url)
+                
                 with col2:
-                    st.image(image_url)
-                    st.write(f"处理后图片: {image_date}")
-            
-            green_area = calculate_green_area(image_url)
-            st.write(f"绿叶面积: {green_area} 像素")
+                    st.image(processed_image)
+                    st.write(f"处理后图片 (绿色轮廓): {image_date}")
+                
+                st.write(f"绿叶面积: {green_area} 像素")
+    else:
+        st.warning("未找到匹配的图片。")
 
 
                 
