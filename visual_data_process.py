@@ -75,27 +75,34 @@ def extract_date_from_filename(filename):
     return None
 
 
-def calculate_green_area_and_contour(image_url):
-    response = requests.get(image_url)
-    image = cv2.imdecode(np.frombuffer(response.content, np.uint8), -1)
-    
+from PIL import Image
+
+def calculate_green_area_and_contour(image):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower_green = np.array([35, 40, 40])
-    upper_green = np.array([90, 255, 255])
+    lower_green = np.array([30, 40, 40])
+    upper_green = np.array([100, 255, 255])
     mask = cv2.inRange(hsv, lower_green, upper_green)
     
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
     contour_image = image.copy()
-    cv2.drawContours(contour_image, contours, -1, (0, 255, 0), 2)
+    cv2.drawContours(contour_image, contours, -1, (0, 255, 0), 3)  # 增加轮廓线宽度
     
     green_area = np.sum(mask > 0)
     
     return green_area, contour_image
 
 def process_image(image_url):
-    green_area, contour_image = calculate_green_area_and_contour(image_url)
-    return green_area, cv2.imencode('.jpg', contour_image)[1].tobytes()
+    response = requests.get(image_url)
+    image = cv2.imdecode(np.frombuffer(response.content, np.uint8), cv2.IMREAD_COLOR)
+    
+    green_area, contour_image = calculate_green_area_and_contour(image)
+    
+    # 转换为PIL Image以便Streamlit显示
+    contour_image_rgb = cv2.cvtColor(contour_image, cv2.COLOR_BGR2RGB)
+    pil_image = Image.fromarray(contour_image_rgb)
+    
+    return green_area, pil_image
 
 def get_image_list(unit_number):
     try:
