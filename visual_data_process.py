@@ -75,24 +75,15 @@ def extract_date_from_filename(filename):
     return None
 
 
-def calculate_green_area(image_url):
-    # Download the image from the URL
-    resp = requests.get(image_url)
-    image = cv2.imdecode(np.frombuffer(resp.content, np.uint8), cv2.IMREAD_COLOR)
-    
-    # Convert to HSV color space
+def calculate_green_area(image):
+
+        # CPU处理
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    
-    # Define range of green color in HSV
-    lower_green = np.array([35, 50, 50])
-    upper_green = np.array([85, 255, 255])
-    
-    # Create a mask for green color
+    lower_green = np.array([35, 40, 40])
+    upper_green = np.array([90, 255, 255])
     mask = cv2.inRange(hsv, lower_green, upper_green)
-    
-    # Calculate the area of green pixels
+
     green_area = np.sum(mask > 0)
-    
     return green_area
 
 def get_image_list(unit_number):
