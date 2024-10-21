@@ -10,6 +10,6 @@ langchain_experimental
 langchain_core
 tabulate
 boto3
-opencv-python-headless
-opencv-contrib-python-headless
+opencv-python-headless>=4.0.0
+opencv-contrib-python-headless>=4.0.0
 matplotlib
