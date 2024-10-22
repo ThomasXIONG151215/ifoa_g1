@@ -124,14 +124,21 @@ def data_viewer(df):
     mask = (df['DateTime'].dt.date >= start_date) & (df['DateTime'].dt.date <= end_date)
     filtered_df = df.loc[mask]
 
-    def clean_data(series):
-        series = series[series != -1]
-        Q1 = series.quantile(0.25)
-        Q3 = series.quantile(0.75)
-        IQR = Q3 - Q1
-        lower_bound = Q1 - 1.5 * IQR
-        upper_bound = Q3 + 1.5 * IQR
-        return series[(series >= lower_bound) & (series <= upper_bound)]
+    def clean_data(series, simple_clean=True):
+      # 移除-1值
+      series = series[series != -1]
+      
+      if simple_clean or len(series) <= 1000:
+          # 数据量小于等于1000时，只去除-1值
+          return series
+      else:
+          # 数据量大时，使用完整的异常值清洗
+          Q1 = series.quantile(0.25)
+          Q3 = series.quantile(0.75)
+          IQR = Q3 - Q1
+          lower_bound = Q1 - 1.5 * IQR
+          upper_bound = Q3 + 1.5 * IQR
+          return series[(series >= lower_bound) & (series <= upper_bound)]
 
     column_groups = {
         '温度': ['Temperature', 'Temperature1', 'Temperature2', 'Temperature3','TempA','TempB','TempC','WTEMP'],
@@ -161,12 +168,16 @@ def data_viewer(df):
         if selected_columns:
             fig = go.Figure()
             for column in selected_columns:
-                clean_series = clean_data(filtered_df[column])
+                # 检查数据量
+                data_series = filtered_df[column]
+                # 仅去除-1值
+                clean_series = data_series[data_series != -1]
+                
                 if not clean_series.empty:
                     fig.add_trace(go.Scatter(x=filtered_df.loc[clean_series.index, 'DateTime'], 
-                                             y=clean_series, 
-                                             mode='lines', 
-                                             name=column))
+                                            y=clean_series, 
+                                            mode='lines', 
+                                            name=column))
 
             y_max = max([trace.y.max() for trace in fig.data])
             y_min = min([trace.y.min() for trace in fig.data])
