@@ -54,7 +54,7 @@ def save_settings(conn, settings):
         st.error(f"更新设置失败: {str(e)}")
 
 
-
+"""
 #@st.cache_data 
 #@st.cache_data 
 def data_analysis(agent_data_analyst):
@@ -110,7 +110,7 @@ def data_analysis(agent_data_analyst):
     message.write(summary)
     
     return combined_info, summary
-
+"""
 
 @st.cache_resource
 def manual_chat(agent_data_analyst,prompt):
@@ -120,7 +120,7 @@ def manual_chat(agent_data_analyst,prompt):
                             avatar=avatar
                             )
     return message, my_data_problem
-
+"""
 def ai_assistants(df):
     agent_data_analyst = create_pandas_dataframe_agent(moonshot_llm#langchain_llm
                                                        , 
@@ -135,4 +135,100 @@ def ai_assistants(df):
             state_new_info += my_data_problem
         else:
             st.write(" ")
+"""
+
+
+
+def data_analysis(agent_data_analyst):
+    questions = [
+        "**最近七天除了unnamed开头的列，还有没有否缺失数据，缺失情况如何?**",
+        "**最近七天，室内温度和湿度稳定性如何？**",
+        "**最近七天，CO2浓度变化规律如何**",
+        "**最近七天，pH变化规律如何**",
+        "**最近七天，EC变化规律如何**",
+    ]
     
+    avatar = ':material/cruelty_free:'
+    combined_info = ""
+    
+    for question in questions:
+        try:
+            st.write(question)
+            message = st.chat_message(name="ai", avatar=avatar)
+            
+            answer = agent_data_analyst.run(f"""
+            请用中文简洁地回答以下问题:
+            
+            {question}
+            
+            要求:
+            1. 只使用2-3个最关键的数据点来回答问题。
+            2. 直接给出结论,不需要详细解释过程。
+            3. 回答应简明扼要,不超过3句话。
+            4. You must always return valid JSON fenced by a markdown code block. Do not return any additional text
+            
+            请确保您的回答简洁、直接,并聚焦于最重要的信息。
+            """)
+            
+            message.write(answer)
+            combined_info += question + "\n" + str(answer) + "\n\n"
+            
+        except Exception as e:
+            error_msg = f"分析问题 '{question}' 时发生错误: {str(e)}"
+            st.warning(error_msg)
+            # 继续处理下一个问题，而不是完全停止
+            continue
+    
+    # 生成总结报告
+    try:
+        summary_prompt = f"""
+        基于以下分析结果,请生成一个中文的简洁的总结报告:
+        
+        1. 总结报告应包含3-5个最重要的发现。
+        2. 每个发现用一句话概括。
+        3. 最后提供1-2个整体建议。
+        4. You must always return valid JSON fenced by a markdown code block. Do not return any additional text
+        
+        请确保总结报告简洁明了,突出关键信息。
+        
+        分析结果:
+        {combined_info}
+        """
+        
+        summary = agent_data_analyst.run(summary_prompt)
+        
+        st.write("**总结报告**")
+        message = st.chat_message(name="ai", avatar=':material/cruelty_free:')
+        message.write(summary)
+        
+    except Exception as e:
+        st.error(f"生成总结报告时出现错误: {str(e)}")
+    
+    return combined_info, summary
+
+def ai_assistants(df):
+    try:
+        agent_data_analyst = create_pandas_dataframe_agent(
+            moonshot_llm,
+            df,
+            verbose=True,
+            allow_dangerous_code=True
+        )
+        
+        data_analysis(agent_data_analyst)
+        
+        prompt = st.chat_input('请输入你感兴趣的问题')
+        with st.expander('补充提问回答'):
+            if prompt:
+                try:
+                    message, my_data_problem = manual_chat(agent_data_analyst, prompt)
+                    message.write(my_data_problem)
+                except Exception as e:
+                    st.error(f"处理提问时出现错误: {str(e)}")
+            else:
+                st.write(" ")
+                
+    except Exception as e:
+        st.error(f"创建数据分析代理时出现错误: {str(e)}")
+
+
