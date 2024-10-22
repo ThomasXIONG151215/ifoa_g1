@@ -74,6 +74,7 @@ def extract_date_from_filename(filename):
         return datetime.strptime(date_str, "%Y-%m-%d_%H-%M-%S")
     return None
 
+""" 
 def improve_green_detection(image):
     # 转换到LAB色彩空间
     lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
@@ -131,7 +132,121 @@ def process_image(image_url):
     
     return green_area, pil_image
 
+"""
 
+
+def improve_green_detection(image):
+    """
+    改进的绿色植物检测算法，增加了多重检查以避免错误识别黑色区域
+    """
+    # 转换到HSV色彩空间，更容易分离颜色
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    
+    # 计算图像的平均亮度
+    brightness = np.mean(hsv[:,:,2])
+    
+    # 如果图像太暗（可能是全黑图像），直接返回空掩码
+    if brightness < 30:  # 可以根据需要调整这个阈值
+        return np.zeros(image.shape[:2], dtype=np.uint8)
+    
+    # 定义绿色的HSV范围
+    lower_green = np.array([35, 30, 30])  # 避免太暗或饱和度太低的像素
+    upper_green = np.array([85, 255, 255])
+    
+    # 创建绿色掩码
+    green_mask = cv2.inRange(hsv, lower_green, upper_green)
+    
+    # 计算LAB色彩空间中的绿色分量
+    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    
+    # 在A通道中绿色为负值，创建另一个掩码
+    _, a_mask = cv2.threshold(a, 127, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    
+    # 组合HSV和LAB的掩码
+    combined_mask = cv2.bitwise_and(green_mask, a_mask)
+    
+    # 使用形态学操作清理噪声
+    kernel = np.ones((3,3), np.uint8)
+    cleaned_mask = cv2.morphologyEx(combined_mask, cv2.MORPH_OPEN, kernel, iterations=2)
+    cleaned_mask = cv2.morphologyEx(cleaned_mask, cv2.MORPH_CLOSE, kernel, iterations=2)
+    
+    return cleaned_mask
+
+def calculate_green_area_and_contour(image):
+    """
+    计算绿色区域面积并绘制轮廓，增加了额外的验证
+    """
+    # 获取改进的绿色检测掩码
+    mask = improve_green_detection(image)
+    
+    # 检查掩码中非零像素的比例
+    mask_coverage = np.count_nonzero(mask) / mask.size
+    
+    # 如果掩码覆盖率不合理（过高或过低），可能是错误检测
+    if mask_coverage > 0.9 or mask_coverage < 0.01:
+        return 0, image.copy(), np.zeros_like(mask)
+    
+    # 寻找轮廓
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # 过滤小的轮廓并验证形状特征
+    filtered_contours = []
+    min_contour_area = 500
+    
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        if area > min_contour_area:
+            # 计算轮廓的形状特征
+            perimeter = cv2.arcLength(cnt, True)
+            circularity = 4 * np.pi * area / (perimeter * perimeter) if perimeter > 0 else 0
+            
+            # 通常植物叶片的轮廓不会太圆，也不会太不规则
+            if 0.1 < circularity < 0.9:
+                filtered_contours.append(cnt)
+    
+    # 创建结果掩码和轮廓图像
+    filtered_mask = np.zeros(mask.shape, dtype=np.uint8)
+    cv2.drawContours(filtered_mask, filtered_contours, -1, 255, -1)
+    
+    contour_image = image.copy()
+    cv2.drawContours(contour_image, filtered_contours, -1, (0, 255, 0), 2)
+    
+    # 计算最终的绿色区域面积
+    green_area = np.sum(filtered_mask > 0)
+    
+    return green_area, contour_image, filtered_mask
+
+def process_image(image_url):
+    """
+    处理图像并返回结果，包含验证步骤
+    """
+    # 读取图像
+    response = requests.get(image_url)
+    image = cv2.imdecode(np.frombuffer(response.content, np.uint8), cv2.IMREAD_COLOR)
+    
+    # 检查图像是否有效
+    if image is None or image.size == 0:
+        return 0, None
+    
+    # 检查图像是否全黑或接近全黑
+    if np.mean(image) < 5:  # 可以调整这个阈值
+        return 0, Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+    
+    # 计算绿色区域和轮廓
+    green_area, contour_image, filtered_mask = calculate_green_area_and_contour(image)
+    
+    # 使用过滤后的掩码来显示主要的绿色区域
+    result_image = cv2.bitwise_and(image, image, mask=filtered_mask)
+    
+    # 在结果图像上绘制轮廓
+    cv2.drawContours(result_image, cv2.findContours(filtered_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0], -1, (0, 255, 0), 2)
+    
+    # 转换为PIL Image
+    result_image_rgb = cv2.cvtColor(result_image, cv2.COLOR_BGR2RGB)
+    pil_image = Image.fromarray(result_image_rgb)
+    
+    return green_area, pil_image
 
 
 def get_image_list(unit_number):
