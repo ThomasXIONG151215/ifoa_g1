@@ -87,23 +87,24 @@ def data_analysis(agent_data_analyst):
 请确保您的回答简洁,直接,并聚焦于最重要的信息"""
 
         answer = agent_data_analyst.run(prompt)
-        message.write(answer)
-        combined_info += f"{question}\n{answer}\n\n"
+    message.write(answer)
+    combined_info += f"{question}\n{answer}\n\n"
     
     # 生成总结报告
-    summary_prompt = """
-      基于以下分析结果,请生成一个中文的简洁的总结报告:
-      
-      1. 总结报告应包含3-5个最重要的发现。
-      2. 每个发现用一句话概括。
-      3. 最后提供1-2个整体建议。
-      4. You must always return valid JSON fenced by a markdown code block. Do not return any additional text
-      
-      请确保总结报告简洁明了,突出关键信息。
-      
-      分析结果:
-      {combined_info}
-    """
+    summary_prompt = f"""
+基于以下分析结果,请生成一个中文的简洁的总结报告:
+
+1. 总结报告应包含3-5个最重要的发现
+2. 每个发现用一句话概括
+3. 最后提供1-2个整体建议
+4. 返回的JSON需要用markdown代码块包裹
+
+请确保总结报告简洁明了,突出关键信息.
+
+分析结果:
+{combined_info}
+"""
+    
     summary = agent_data_analyst.run(summary_prompt)
     
     st.write("**总结报告**")
