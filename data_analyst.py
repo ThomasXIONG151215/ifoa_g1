@@ -74,19 +74,19 @@ def data_analysis(agent_data_analyst):
         message = st.chat_message(name="ai", avatar=avatar)
         
         prompt = f"""
-请用中文简洁地回答以下问题:
+        请用中文简洁地回答以下问题:
+                
+        {question}
+                
+        要求:
+        1. 只使用2-3个最关键的数据点来回答问题
+        2. 直接给出结论,不需要详细解释过程
+        3. 回答应简明扼要,不超过3句话
+        4. 如果可能,请提供一个简短的建议或见解
+        5. 返回的JSON需要用markdown代码块包裹
         
-{question}
-        
-要求:
-1. 只使用2-3个最关键的数据点来回答问题
-2. 直接给出结论,不需要详细解释过程
-3. 回答应简明扼要,不超过3句话
-4. 如果可能,请提供一个简短的建议或见解
-5. 返回的JSON需要用markdown代码块包裹
-
-请确保您的回答简洁,直接,并聚焦于最重要的信息
-"""
+        请确保您的回答简洁,直接,并聚焦于最重要的信息
+        """
 
         answer = agent_data_analyst.run(prompt)
     message.write(answer)
