@@ -171,7 +171,7 @@ def data_viewer(df):
                 # 检查数据量
                 data_series = filtered_df[column]
                 # 仅去除-1值
-                clean_series = data_series[data_series != -1]
+                clean_series = clean_data(filtered_df[column]) #data_series[data_series != -1]
                 
                 if not clean_series.empty:
                     fig.add_trace(go.Scatter(x=filtered_df.loc[clean_series.index, 'DateTime'], 
@@ -201,7 +201,7 @@ def data_viewer(df):
     summary_df = pd.DataFrame()
     
     for column in numeric_columns:
-        clean_series = clean_data(df[column])
+        clean_series = clean_data(filtered_df[column])
         if not clean_series.empty:
             summary_df[column] = clean_series.describe()
     
