@@ -188,7 +188,7 @@ def data_analysis(agent_data_analyst):
 def ai_assistants(df):
     try:
         agent_data_analyst = create_pandas_dataframe_agent(
-            moonshot_llm,
+            langchain_llm,#moonshot_llm,
             df,
             verbose=True,
             allow_dangerous_code=True
