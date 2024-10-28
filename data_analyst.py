@@ -72,8 +72,9 @@ def data_analysis(agent_data_analyst):
     for question in questions:
         st.write(question)
         message = st.chat_message(name="ai", avatar=avatar)
-        answer = agent_data_analyst.run(f"""
-        请用中文简洁地回答以下问题:
+        answer = agent_data_analyst.run(
+        f"""请用中文简洁地回答以下问题:
+        
         
         {question}
         
@@ -85,7 +86,8 @@ def data_analysis(agent_data_analyst):
         5. You must always return valid JSON fenced by a markdown code block. Do not return any additional text
         
         请确保您的回答简洁、直接,并聚焦于最重要的信息。
-        """)
+        """
+        )
         message.write(answer)
         combined_info += question + "\n" + answer + "\n\n"
     
