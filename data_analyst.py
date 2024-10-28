@@ -85,7 +85,7 @@ def data_analysis(agent_data_analyst):
         4. 如果可能,请提供一个简短的建议或见解
         5. You must always return valid JSON fenced by a markdown code block. Do not return any additional text
         
-        请确保您的回答简洁、直接,并聚焦于最重要的信息
+        请确保您的回答简洁,直接,并聚焦于最重要的信息
         """
         )
         message.write(answer)
