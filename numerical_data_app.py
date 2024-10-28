@@ -128,7 +128,7 @@ def data_viewer(df):
       # 移除-1值
       series = series[series != -1]
       
-      if simple_clean or len(series) <= 1000:
+      if simple_clean or len(series) <= 100:
           # 数据量小于等于1000时，只去除-1值
           return series
       else:
